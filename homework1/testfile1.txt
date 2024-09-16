@@ -1,0 +1,164 @@
+int var1 = 1;
+int var2 = 2;
+const int var3 = 3;
+const int num1 = 10;
+const int num2 = 20;
+const char var4 = 'a';
+char var5 = 'b';
+int arr1[2] = {num1 + num2, num1 - num2}, arr2[2] = {num1 - num2, num1 + num2};
+char arr3[5] = "abcd";
+const char arr4[5] = "ab";
+const int a[2] = {1, 2}, b = 1;
+int arr6[5];
+void do_nothing()
+{
+    int var6 = (var1 + var2);
+}
+
+int cal(int a, int b)
+{
+    return a + b * a - b / a;
+}
+
+char get_my_c()
+{
+    return 'w';
+}
+
+int get_true()
+{
+    return 1;
+}
+
+int get_false()
+{
+    return 0;
+}
+
+void cal_array(int a[], int b)
+{
+    int var7 = a[0] + b;
+}
+
+void is_blank()
+{
+    return;
+}
+
+void is_blank2(int a)
+{
+
+}
+
+void no_print()
+{
+    printf("%d\n", +var1);
+    printf("%d\n", -var1);
+}
+
+int main()
+{
+    printf("22371500\n");
+    int input;
+    input = getint();
+    char ch;
+    ch = getchar();
+    if (input > 10)
+    {
+        printf("%d\n", var1);
+    }
+    int i;
+    for (i = input; i < 20; i = i + 1)
+    {
+        input = input - 1;
+    }
+    printf("%d\n", var1 % var2);
+    do_nothing();
+    input = cal(var1, var2);
+    printf("%d\n", input);
+    if (input == 2)
+    {
+        do_nothing();
+    }
+    else
+    {
+        printf("%d\n", input);
+    }
+    if (input != 3)
+    {
+        do_nothing();
+    }
+    if (!input)
+    {
+        do_nothing();
+    }
+    i = 1;
+    for (; ;)
+    {
+        if (i >= 50)
+        {
+            do_nothing();
+            break;
+        }
+        i = i + 1;
+        if (i <= 30)
+        {
+            do_nothing();
+            continue;
+        }
+    }
+    cal_array(arr1, arr2[1]);
+    for (i = 1; i < 10;)
+    {
+        i = i + 1;
+    }
+    for (; i < 10; i = i + 1)
+    {
+        do_nothing();
+    }
+    for (i = 1;; i = i + 1)
+    {
+        if (i == 3)
+        {
+            break;
+        }
+    }
+    for (;; i = i + 1)
+    {
+        if (i == 5)
+        {
+            break;
+        }
+    }
+    for (; i < 10;)
+    {
+        i = i + 1;
+    }
+    for (i = 1;;)
+    {
+        i = i + 1;
+        if (i == 5)
+        {
+            break;
+        }
+    }
+    if (0 && get_true())
+    {
+        do_nothing();
+    }
+    if (1 || get_false())
+    {
+        do_nothing();
+    }
+    if ('a' + 'b' > 'c')
+    {
+        do_nothing();
+    }
+    is_blank2(arr1[0]);
+    printf("%d\n", var1 + var2);
+    printf("%d\n", var1 - var2);
+    printf("%d\n", var1 * var2);
+    printf("%d\n", var1 / var2);
+    printf("%d\n", var1 % var2);
+    printf("This is end.");
+}
