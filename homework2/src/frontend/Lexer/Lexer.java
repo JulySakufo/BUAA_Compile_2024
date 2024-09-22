@@ -157,8 +157,12 @@ public class Lexer {
                 if (line.charAt(pos) == '/') { //为单行注释，将pos直接置于行末
                     pos = line.length() - 1;
                 } else if (line.charAt(pos) == '*') { //为多行注释，先将pos置于这一行的行末
-                    pos = line.length() - 1;
-                    isBlockComment = true;
+                    if (!line.contains("*/")) { //多行注释未结束在本行
+                        pos = line.length() - 1;
+                        isBlockComment = true;
+                    } else {
+                        pos = line.indexOf("*/") + 1; //pos指在/
+                    }
                 } else {
                     pos--;
                     Token token = new Token(sb.toString(), TokenType.DIV);
