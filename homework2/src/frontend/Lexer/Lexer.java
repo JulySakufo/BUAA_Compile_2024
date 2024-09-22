@@ -95,6 +95,9 @@ public class Lexer {
         StringBuilder sb = new StringBuilder();
         sb.append(line.charAt(pos++));
         while (pos < line.length() && line.charAt(pos) != '\"') {
+            if (line.charAt(pos) == '\\') {
+                sb.append(line.charAt(pos++)); //考虑转义符的影响
+            }
             sb.append(line.charAt(pos++));
         }
         sb.append(line.charAt(pos++));
