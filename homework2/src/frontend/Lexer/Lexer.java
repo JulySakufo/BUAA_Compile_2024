@@ -66,7 +66,7 @@ public class Lexer {
     public void parseIdent() { //用于分析保留字和标识符
         StringBuilder sb = new StringBuilder();
         sb.append(line.charAt(pos++));
-        while (pos < line.length() && isIdent(line.charAt(pos)) || isDigit(line.charAt(pos))) {
+        while (pos < line.length() && (isIdent(line.charAt(pos)) || isDigit(line.charAt(pos)))) {
             sb.append(line.charAt(pos++));
         }
         if (isReserve(sb.toString())) {
