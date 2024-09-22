@@ -8,8 +8,9 @@ public class Compiler {
         try (BufferedReader stdin = new BufferedReader(new FileReader("D:\\BUAA_Compile_2024\\homework2\\src\\testfile.txt"))) {
             Lexer lexer = new Lexer(stdin);
             lexer.analyse(); //开始词法分析
-        } catch (Exception ignored) {
-        
+        } catch (Exception e) {
+            System.out.println("Error occurred: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
