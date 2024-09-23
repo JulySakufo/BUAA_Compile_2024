@@ -174,6 +174,7 @@ public class Lexer {
                     Token token = new Token(sb.toString(), TokenType.DIV);
                     tokenList.add(token);
                 }
+                break;
             default:
                 sb.append(line.charAt(pos));
                 TokenType tokenType = getTokenType(sb.toString());
@@ -181,6 +182,7 @@ public class Lexer {
                     Token token = new Token(sb.toString(), tokenType);
                     tokenList.add(token);
                 }
+                break;
         }
     }
     
