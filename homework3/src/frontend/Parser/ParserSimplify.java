@@ -578,7 +578,7 @@ public class ParserSimplify {
                 break;
             case IDENFR:
                 getNextToken();
-                if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = exp
+                if (peekToken().getTokenType() == TokenType.ASSIGN || peekToken().getTokenType() == TokenType.LBRACK) { //是LVal = exp
                     pos = pos - 1; //回退到ident
                     parseLVal();
                     addInfo(); // =
