@@ -214,7 +214,7 @@ public class ParserSimplify {
         } else {
             if (peekToken().getTokenType() == TokenType.INTTK || peekToken().getTokenType() == TokenType.CHARTK) { //FuncFParams
                 parseFuncFParams();
-                if (peekToken().getTokenType() == TokenType.LPARENT) {
+                if (peekToken().getTokenType() == TokenType.RPARENT) {
                     addInfo();
                     getNextToken();
                 } else {
