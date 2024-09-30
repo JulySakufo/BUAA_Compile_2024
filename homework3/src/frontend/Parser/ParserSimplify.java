@@ -84,6 +84,7 @@ public class ParserSimplify {
                 constDecl.addConstDef(parseConstDef());
             }
             if (peekToken().getTokenType() == TokenType.SEMICN) { //遇到;结束
+                addInfo();
                 getNextToken();
             } else {
                 dealError(peekToken().getLineNum() - 1, "i");
@@ -126,11 +127,11 @@ public class ParserSimplify {
             } else {
                 dealError(peekToken().getLineNum(), "k");
             }
-            addInfo(); // =
-            getNextToken();
-            parseConstInitVal();
-            infos.add("<ConstDef>");
         }
+        addInfo(); // =
+        getNextToken();
+        parseConstInitVal();
+        infos.add("<ConstDef>");
         return null;
     }
     
@@ -576,43 +577,49 @@ public class ParserSimplify {
                 parseBlock();
                 break;
             case IDENFR:
-                parseLVal();
-                addInfo(); // =
                 getNextToken();
-                if (peekToken().getTokenType() == TokenType.GETINTTK || peekToken().getTokenType() == TokenType.GETCHARTK) {
-                    addInfo();
-                    getNextToken();// (
-                    addInfo();
+                if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = exp
+                    pos = pos - 1; //回退到ident
+                    parseLVal();
+                    addInfo(); // =
                     getNextToken();
-                    if (peekToken().getTokenType() == TokenType.RPARENT) {
+                    if (peekToken().getTokenType() == TokenType.GETINTTK || peekToken().getTokenType() == TokenType.GETCHARTK) {
+                        addInfo();
+                        getNextToken();// (
                         addInfo();
                         getNextToken();
-                        if (peekToken().getTokenType() == TokenType.SEMICN) {
+                        if (peekToken().getTokenType() == TokenType.RPARENT) {
                             addInfo();
                             getNextToken();
+                            if (peekToken().getTokenType() == TokenType.SEMICN) {
+                                addInfo();
+                                getNextToken();
+                            } else {
+                                dealError(peekToken().getLineNum() - 1, "i");
+                            }
                         } else {
-                            dealError(peekToken().getLineNum() - 1, "i");
+                            if (peekToken().getTokenType() == TokenType.SEMICN) {
+                                dealError(peekToken().getLineNum(), "j");
+                                addInfo();
+                                getNextToken();
+                            } else {
+                                dealError(peekToken().getLineNum() - 1, "j");
+                                dealError(peekToken().getLineNum() - 1, "i");
+                            }
                         }
                     } else {
+                        parseExp();
                         if (peekToken().getTokenType() == TokenType.SEMICN) {
-                            dealError(peekToken().getLineNum(), "j");
                             addInfo();
                             getNextToken();
                         } else {
-                            dealError(peekToken().getLineNum() - 1, "j");
                             dealError(peekToken().getLineNum() - 1, "i");
                         }
                     }
+                    break;
                 } else {
-                    parseExp();
-                    if (peekToken().getTokenType() == TokenType.SEMICN) {
-                        addInfo();
-                        getNextToken();
-                    } else {
-                        dealError(peekToken().getLineNum() - 1, "i");
-                    }
+                    pos = pos - 1; //回退到ident 可能是函数调用啥的用下面的parse
                 }
-                break;
             default:
                 if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                         || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
