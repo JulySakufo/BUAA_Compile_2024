@@ -79,6 +79,7 @@ public class ParserSimplify {
             getNextToken(); //指向下一个
             constDecl.addConstDef(parseConstDef());
             while (peekToken().getTokenType() == TokenType.COMMA) {
+                addInfo();
                 getNextToken();
                 constDecl.addConstDef(parseConstDef());
             }
@@ -95,8 +96,9 @@ public class ParserSimplify {
             getNextToken(); // varDef
             varDecl.addVarDef(parseVarDef());
             while (peekToken().getTokenType() == TokenType.COMMA) {
+                addInfo();
                 getNextToken();
-                //varDecl.addVarDef(parseVarDef());
+                varDecl.addVarDef(parseVarDef());
             }
             if (peekToken().getTokenType() == TokenType.SEMICN) {
                 addInfo();
