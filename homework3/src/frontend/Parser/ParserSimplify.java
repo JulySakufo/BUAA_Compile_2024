@@ -194,7 +194,7 @@ public class ParserSimplify {
         } else { //ConstExp
             parseExp();
         }
-        infos.add("InitVal>");
+        infos.add("<InitVal>");
     }
     
     public void parseFuncDef() {
