@@ -162,12 +162,14 @@ public class ParserSimplify {
         if (peekToken().getTokenType() == TokenType.LBRACE) {
             addInfo();
             getNextToken();
-            parseConstExp();
-            while (peekToken().getTokenType() == TokenType.COMMA) {
-                addInfo();
-                getNextToken();
+            if (peekToken().getTokenType() != TokenType.RBRACE) { //{1,2}不是{}的情况
                 parseConstExp();
-            }
+                while (peekToken().getTokenType() == TokenType.COMMA) {
+                    addInfo();
+                    getNextToken();
+                    parseConstExp();
+                }
+            } //考虑constInitVal的集合情况为空
             addInfo(); // }
             getNextToken();
         } else if (peekToken().getTokenType() == TokenType.STRCON) {
