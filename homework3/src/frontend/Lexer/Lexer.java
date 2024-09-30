@@ -12,7 +12,6 @@ public class Lexer {
     private int lineNum;
     private int pos;
     private ArrayList<Token> tokenList;
-    private boolean isError;
     private boolean isBlockComment;
     
     public Lexer(BufferedReader stdin) {
@@ -20,7 +19,6 @@ public class Lexer {
         this.lineNum = 0;
         this.pos = 0;
         this.tokenList = new ArrayList<>();
-        this.isError = false;
         this.isBlockComment = false;
     }
     
@@ -52,15 +50,6 @@ public class Lexer {
                 }
             }
         }
-        if (!isError) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework2\\src\\lexer.txt"))) {
-                for (Token token : tokenList) {
-                    stdout.write(token.getTokenType() + " " + token.getToken() + "\n");
-                }
-            } catch (Exception ignored) {
-            
-            }
-        }
     }
     
     public void parseIdent() { //用于分析保留字和标识符
@@ -71,10 +60,10 @@ public class Lexer {
         }
         if (isReserve(sb.toString())) {
             TokenType tokenType = getTokenType(sb.toString());
-            Token token = new Token(sb.toString(), tokenType);
+            Token token = new Token(sb.toString(), tokenType, lineNum);
             tokenList.add(token);
         } else {
-            Token token = new Token(sb.toString(), TokenType.IDENFR);
+            Token token = new Token(sb.toString(), TokenType.IDENFR, lineNum);
             tokenList.add(token);
         }
         pos--;
@@ -86,7 +75,7 @@ public class Lexer {
         while (pos < line.length() && isDigit(line.charAt(pos))) {
             sb.append(line.charAt(pos++));
         }
-        Token token = new Token(sb.toString(), TokenType.INTCON);
+        Token token = new Token(sb.toString(), TokenType.INTCON, lineNum);
         tokenList.add(token);
         pos--;
     }
@@ -101,7 +90,7 @@ public class Lexer {
             sb.append(line.charAt(pos++));
         }
         sb.append(line.charAt(pos++));
-        Token token = new Token(sb.toString(), TokenType.STRCON);
+        Token token = new Token(sb.toString(), TokenType.STRCON, lineNum);
         tokenList.add(token);
         pos--;
     }
@@ -116,7 +105,7 @@ public class Lexer {
             sb.append(line.charAt(pos++));
         }
         sb.append(line.charAt(pos++));
-        Token token = new Token(sb.toString(), TokenType.CHRCON);
+        Token token = new Token(sb.toString(), TokenType.CHRCON, lineNum);
         tokenList.add(token);
         pos--;
     }
@@ -131,11 +120,10 @@ public class Lexer {
                 if (line.charAt(pos) == ch) { // (&&) | (||)
                     sb.append(line.charAt(pos));
                     TokenType tokenType = getTokenType(sb.toString());
-                    Token token = new Token(sb.toString(), tokenType);
+                    Token token = new Token(sb.toString(), tokenType, lineNum);
                     tokenList.add(token); //停在最后一个&或者|，等待for循环将位置往前推
                 } else { // (&) | (|)
                     pos--; //回退到&或者|身上
-                    isError = true;
                     dealError();
                 }
                 break;
@@ -148,12 +136,12 @@ public class Lexer {
                 if (line.charAt(pos) == '=') { //!= || <= || >= || ==
                     sb.append(line.charAt(pos));
                     TokenType tokenType = getTokenType(sb.toString());
-                    Token token = new Token(sb.toString(), tokenType);
+                    Token token = new Token(sb.toString(), tokenType, lineNum);
                     tokenList.add(token);
                 } else { //!
                     pos--; //回退到!或者<或者>或者=
                     TokenType tokenType = getTokenType(sb.toString());
-                    Token token = new Token(sb.toString(), tokenType);
+                    Token token = new Token(sb.toString(), tokenType, lineNum);
                     tokenList.add(token);
                 }
                 break;
@@ -171,7 +159,7 @@ public class Lexer {
                     }
                 } else {
                     pos--;
-                    Token token = new Token(sb.toString(), TokenType.DIV);
+                    Token token = new Token(sb.toString(), TokenType.DIV, lineNum);
                     tokenList.add(token);
                 }
                 break;
@@ -179,7 +167,7 @@ public class Lexer {
                 sb.append(line.charAt(pos));
                 TokenType tokenType = getTokenType(sb.toString());
                 if (tokenType != null) {
-                    Token token = new Token(sb.toString(), tokenType);
+                    Token token = new Token(sb.toString(), tokenType, lineNum);
                     tokenList.add(token);
                 }
                 break;
@@ -202,8 +190,12 @@ public class Lexer {
         return TokenTypeMap.getInstance().getTokenType(token);
     }
     
+    public ArrayList<Token> getTokenList() {
+        return tokenList;
+    }
+    
     public void dealError() throws IOException {
-        try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework2\\src\\error.txt"))) {
+        try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt"))) {
             stderr.write(lineNum + " " + "a\n"); //目前只有a类错误
         } catch (Exception ignored) {
         
