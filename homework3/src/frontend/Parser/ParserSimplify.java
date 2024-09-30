@@ -185,12 +185,14 @@ public class ParserSimplify {
         if (peekToken().getTokenType() == TokenType.LBRACE) {
             addInfo();
             getNextToken();
-            parseExp();
-            while (peekToken().getTokenType() == TokenType.COMMA) {
-                addInfo();
-                getNextToken();
+            if (peekToken().getTokenType() != TokenType.RBRACE) {
                 parseExp();
-            }
+                while (peekToken().getTokenType() == TokenType.COMMA) {
+                    addInfo();
+                    getNextToken();
+                    parseExp();
+                }
+            } //考虑int a[2] = {};的情况
             addInfo(); // }
             getNextToken();
         } else if (peekToken().getTokenType() == TokenType.STRCON) {
