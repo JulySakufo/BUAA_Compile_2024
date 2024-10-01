@@ -124,6 +124,13 @@ public class Lexer {
                     tokenList.add(token); //停在最后一个&或者|，等待for循环将位置往前推
                 } else { // (&) | (|)
                     pos--; //回退到&或者|身上
+                    if (ch == '&') { //将其当做 '&&' 与 '||' 进行处理,记录单词名称的时候仍记录 '&'和'|'
+                        Token token = new Token(sb.toString(), TokenType.AND, lineNum);
+                        tokenList.add(token);
+                    } else {
+                        Token token = new Token(sb.toString(), TokenType.OR, lineNum);
+                        tokenList.add(token);
+                    }
                     dealError();
                 }
                 break;
