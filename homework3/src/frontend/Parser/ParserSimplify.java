@@ -581,46 +581,22 @@ public class ParserSimplify {
                 parseBlock();
                 break;
             case IDENFR:
-                getNextToken();
-                if (peekToken().getTokenType() == TokenType.ASSIGN || peekToken().getTokenType() == TokenType.LBRACK) { //是LVal = exp
+                getNextToken(); // a[   ||  a = ， a=一定是LVal = exp的形式，a[还要判断
+                if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = exp
                     pos = pos - 1; //回退到ident
-                    parseLVal();
-                    addInfo(); // =
-                    getNextToken();
-                    if (peekToken().getTokenType() == TokenType.GETINTTK || peekToken().getTokenType() == TokenType.GETCHARTK) {
-                        addInfo();
-                        getNextToken();// (
-                        addInfo();
-                        getNextToken();
-                        if (peekToken().getTokenType() == TokenType.RPARENT) {
-                            addInfo();
-                            getNextToken();
-                            if (peekToken().getTokenType() == TokenType.SEMICN) {
-                                addInfo();
-                                getNextToken();
-                            } else {
-                                dealError(peekToken().getLineNum() - 1, "i");
-                            }
-                        } else {
-                            if (peekToken().getTokenType() == TokenType.SEMICN) {
-                                dealError(peekToken().getLineNum(), "j");
-                                addInfo();
-                                getNextToken();
-                            } else {
-                                dealError(peekToken().getLineNum() - 1, "j");
-                                dealError(peekToken().getLineNum() - 1, "i");
-                            }
-                        }
-                    } else {
-                        parseExp();
-                        if (peekToken().getTokenType() == TokenType.SEMICN) {
-                            addInfo();
-                            getNextToken();
-                        } else {
-                            dealError(peekToken().getLineNum() - 1, "i");
-                        }
-                    }
+                    LVal2Exp();
                     break;
+                } else if (peekToken().getTokenType() == TokenType.LBRACK) { //a[ TODO：又臭又长的代码，记得优化
+                    getNextToken(); //exp
+                    getNextToken(); //]
+                    getNextToken(); //看是=还是其他
+                    if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp
+                        pos = pos - 4;
+                        LVal2Exp();
+                        break;
+                    } else { //是[Exp]，准备进行下面的parseExp
+                        pos = pos - 4;
+                    }
                 } else {
                     pos = pos - 1; //回退到ident 可能是函数调用啥的用下面的parse
                 }
@@ -638,6 +614,45 @@ public class ParserSimplify {
                 }
         }
         infos.add("<Stmt>");
+    }
+    
+    public void LVal2Exp() {
+        parseLVal();
+        addInfo(); // =
+        getNextToken();
+        if (peekToken().getTokenType() == TokenType.GETINTTK || peekToken().getTokenType() == TokenType.GETCHARTK) {
+            addInfo();
+            getNextToken();// (
+            addInfo();
+            getNextToken();
+            if (peekToken().getTokenType() == TokenType.RPARENT) {
+                addInfo();
+                getNextToken();
+                if (peekToken().getTokenType() == TokenType.SEMICN) {
+                    addInfo();
+                    getNextToken();
+                } else {
+                    dealError(peekToken().getLineNum() - 1, "i");
+                }
+            } else {
+                if (peekToken().getTokenType() == TokenType.SEMICN) {
+                    dealError(peekToken().getLineNum(), "j");
+                    addInfo();
+                    getNextToken();
+                } else {
+                    dealError(peekToken().getLineNum() - 1, "j");
+                    dealError(peekToken().getLineNum() - 1, "i");
+                }
+            }
+        } else {
+            parseExp();
+            if (peekToken().getTokenType() == TokenType.SEMICN) {
+                addInfo();
+                getNextToken();
+            } else {
+                dealError(peekToken().getLineNum() - 1, "i");
+            }
+        }
     }
     
     public Token getNextToken() {
