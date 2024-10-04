@@ -342,12 +342,12 @@ public class ParserSimplify {
                             || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                             || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
                         parseFuncRParams(); //实参的第一个字符可能的情况
-                        if (peekToken().getTokenType() == TokenType.RPARENT) { // )
-                            addInfo();
-                            getNextToken();
-                        } else {
-                            dealError(peekToken().getLineNum(), "j");
-                        }
+                    }
+                    if (peekToken().getTokenType() == TokenType.RPARENT) { // )
+                        addInfo();
+                        getNextToken();
+                    } else { //没有右括号
+                        dealError(peekToken().getLineNum(), "i");
                     }
                 }
             } else { //是primaryExp的ident
