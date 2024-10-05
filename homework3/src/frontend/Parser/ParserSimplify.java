@@ -1,5 +1,6 @@
 package frontend.Parser;
 
+import frontend.Error.MyError;
 import frontend.Lexer.Token;
 import frontend.Lexer.TokenType;
 import frontend.SyntaxTree.*;
@@ -7,6 +8,7 @@ import frontend.SyntaxTree.*;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 public class ParserSimplify {
     private ArrayList<Token> tokenList;
@@ -14,13 +16,15 @@ public class ParserSimplify {
     private int pos;
     private ArrayList<String> infos;
     private int count;
+    private ArrayList<MyError> errorList;
     
-    public ParserSimplify(ArrayList<Token> tokenList) {
+    public ParserSimplify(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
         this.isError = false;
         this.pos = -1;
         this.infos = new ArrayList<>();
         this.count = 0;
+        this.errorList = errorList;
     }
     
     public void parseCompUnit() { //CompUnit → {Decl} {FuncDef} MainFuncDef
@@ -64,6 +68,15 @@ public class ParserSimplify {
             try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\parser.txt"))) {
                 for (String info : infos) {
                     stdout.write(info + "\n");
+                }
+            } catch (Exception ignored) {
+            
+            }
+        } else {
+            errorList.sort(Comparator.comparingInt(MyError::getLineNum));
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt", true))) {
+                for (MyError error : errorList) {
+                    stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
             } catch (Exception ignored) {
             
@@ -680,11 +693,7 @@ public class ParserSimplify {
     
     public void dealError(int lineNum, String type) { //考虑到词法分析会先生成错误信息，在最后的错误信息输出时应先按行号排序
         isError = true;
-        try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt", true))) {
-            stderr.write(lineNum + " " + type + "\n");
-        } catch (Exception ignored) {
-        
-        }
+        errorList.add(new MyError(lineNum, type));
     }
     
     public void findError() {

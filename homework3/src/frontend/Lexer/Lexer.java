@@ -1,5 +1,7 @@
 package frontend.Lexer;
 
+import frontend.Error.MyError;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -13,6 +15,7 @@ public class Lexer {
     private int pos;
     private ArrayList<Token> tokenList;
     private boolean isBlockComment;
+    private ArrayList<MyError> errorList;
     
     public Lexer(BufferedReader stdin) {
         this.stdin = stdin;
@@ -20,6 +23,7 @@ public class Lexer {
         this.pos = 0;
         this.tokenList = new ArrayList<>();
         this.isBlockComment = false;
+        this.errorList = new ArrayList<>();
     }
     
     public void analyse() throws IOException {
@@ -201,11 +205,16 @@ public class Lexer {
         return tokenList;
     }
     
+    public ArrayList<MyError> getErrorList() {
+        return errorList;
+    }
+    
     public void dealError() throws IOException {
-        try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt"))) {
-            stderr.write(lineNum + " " + "a\n"); //目前只有a类错误
-        } catch (Exception ignored) {
-        
-        }
+        errorList.add(new MyError(lineNum, "a"));
+//        try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt"))) {
+//            stderr.write(lineNum + " " + "a\n"); //目前只有a类错误
+//        } catch (Exception ignored) {
+//
+//        }
     }
 }

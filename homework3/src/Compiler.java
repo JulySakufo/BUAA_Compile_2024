@@ -9,7 +9,7 @@ public class Compiler {
         try (BufferedReader stdin = new BufferedReader(new FileReader("D:\\BUAA_Compile_2024\\homework3\\src\\testfile.txt"))) {
             Lexer lexer = new Lexer(stdin);
             lexer.analyse(); //开始词法分析
-            ParserSimplify parser = new ParserSimplify(lexer.getTokenList()); //将词法分析得到的词法单元流传入给parser
+            ParserSimplify parser = new ParserSimplify(lexer.getTokenList(), lexer.getErrorList()); //将词法分析得到的词法单元流传入给parser
             parser.parseCompUnit(); //开始语法分析
         } catch (Exception e) {
             System.out.println("Error occurred: " + e.getMessage());
