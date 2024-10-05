@@ -65,7 +65,7 @@ public class ParserSimplify {
         parseMainFuncDef();
         infos.add("<CompUnit>");
         if (!isError) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\parser.txt"))) {
+            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("parser.txt"))) {
                 for (String info : infos) {
                     stdout.write(info + "\n");
                 }
@@ -74,7 +74,7 @@ public class ParserSimplify {
             }
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
-            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt", true))) {
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("error.txt", true))) {
                 for (MyError error : errorList) {
                     stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
@@ -101,8 +101,10 @@ public class ParserSimplify {
             if (peekToken().getTokenType() == TokenType.SEMICN) { //遇到;结束
                 addInfo();
                 getNextToken();
-            } else {
-                dealError(peekToken().getLineNum() - 1, "i");
+            } else { //没遇到分号
+                int lastLineNum = getLastToken().getLineNum();
+                int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                dealError(Math.min(lastLineNum, nowLineNum), "i");
             }
             infos.add("<ConstDecl>");
             return constDecl;
@@ -120,7 +122,9 @@ public class ParserSimplify {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum() - 1, "i");
+                int lastLineNum = getLastToken().getLineNum();
+                int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                dealError(Math.min(lastLineNum, nowLineNum), "i");
             }
             infos.add("<VarDecl>");
             return varDecl;
@@ -363,7 +367,9 @@ public class ParserSimplify {
                         addInfo();
                         getNextToken();
                     } else { //没有右括号
-                        dealError(peekToken().getLineNum(), "i");
+                        int lastLineNum = getLastToken().getLineNum();
+                        int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                        dealError(Math.min(lastLineNum, nowLineNum), "j"); //TODO:括号是j
                     }
                 }
             } else { //是primaryExp的ident
@@ -532,7 +538,9 @@ public class ParserSimplify {
                         addInfo();
                         getNextToken();
                     } else { //缺少;
-                        dealError(peekToken().getLineNum() - 1, "i");
+                        int lastLineNum = getLastToken().getLineNum();
+                        int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                        dealError(Math.min(lastLineNum, nowLineNum), "i");
                     }
                 } else { //缺少)
                     if (peekToken().getTokenType() == TokenType.SEMICN) {
@@ -540,8 +548,10 @@ public class ParserSimplify {
                         addInfo();
                         getNextToken();
                     } else { //缺少)和;同时犯i,j类错误
-                        dealError(peekToken().getLineNum() - 1, "j");
-                        dealError(peekToken().getLineNum() - 1, "i");
+                        int lastLineNum = getLastToken().getLineNum();
+                        int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                        dealError(Math.min(lastLineNum, nowLineNum), "j");
+                        dealError(Math.min(lastLineNum, nowLineNum), "i");
                     }
                 }
                 break;
@@ -553,7 +563,9 @@ public class ParserSimplify {
                     addInfo();
                     getNextToken();
                 } else {
-                    dealError(peekToken().getLineNum() - 1, "i");
+                    int lastLineNum = getLastToken().getLineNum();
+                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                    dealError(Math.min(lastLineNum, nowLineNum), "i");
                 }
                 break;
             case RETURNTK:
@@ -568,7 +580,9 @@ public class ParserSimplify {
                     addInfo();
                     getNextToken();
                 } else {
-                    dealError(peekToken().getLineNum() - 1, "i");
+                    int lastLineNum = getLastToken().getLineNum();
+                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                    dealError(Math.min(lastLineNum, nowLineNum), "i");
                 }
                 break;
             case FORTK:
@@ -634,7 +648,9 @@ public class ParserSimplify {
                     addInfo();
                     getNextToken();
                 } else {
-                    dealError(peekToken().getLineNum() - 1, "i");
+                    int lastLineNum = getLastToken().getLineNum();
+                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                    dealError(Math.min(lastLineNum, nowLineNum), "i");
                 }
         }
         infos.add("<Stmt>");
@@ -656,7 +672,9 @@ public class ParserSimplify {
                     addInfo();
                     getNextToken();
                 } else {
-                    dealError(peekToken().getLineNum() - 1, "i");
+                    int lastLineNum = getLastToken().getLineNum();
+                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                    dealError(Math.min(lastLineNum, nowLineNum), "i");
                 }
             } else {
                 if (peekToken().getTokenType() == TokenType.SEMICN) {
@@ -664,8 +682,10 @@ public class ParserSimplify {
                     addInfo();
                     getNextToken();
                 } else {
-                    dealError(peekToken().getLineNum() - 1, "j");
-                    dealError(peekToken().getLineNum() - 1, "i");
+                    int lastLineNum = getLastToken().getLineNum();
+                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                    dealError(Math.min(lastLineNum, nowLineNum), "j");
+                    dealError(Math.min(lastLineNum, nowLineNum), "i");
                 }
             }
         } else {
@@ -674,7 +694,9 @@ public class ParserSimplify {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum() - 1, "i");
+                int lastLineNum = getLastToken().getLineNum();
+                int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
+                dealError(Math.min(lastLineNum, nowLineNum), "i");
             }
         }
     }
@@ -694,6 +716,10 @@ public class ParserSimplify {
     public void dealError(int lineNum, String type) { //考虑到词法分析会先生成错误信息，在最后的错误信息输出时应先按行号排序
         isError = true;
         errorList.add(new MyError(lineNum, type));
+    }
+    
+    public Token getLastToken() { //得到上一个token
+        return tokenList.get(pos - 1);
     }
     
     public void findError() {
