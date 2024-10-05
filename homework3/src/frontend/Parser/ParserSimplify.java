@@ -584,7 +584,7 @@ public class ParserSimplify {
                 parseBlock();
                 break;
             case IDENFR:
-                int last_pos = pos; //标识符的位置
+                int lastPos = pos; //标识符的位置
                 getNextToken(); // a[   ||  a = ， a=一定是LVal = exp的形式，a[还要判断
                 if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = exp
                     pos = pos - 1; //回退到ident
@@ -592,15 +592,20 @@ public class ParserSimplify {
                     break;
                 } else if (peekToken().getTokenType() == TokenType.LBRACK) { //a[ TODO：又臭又长的代码，记得优化
                     getNextToken(); //exp
+                    int oldInfoSize = infos.size() - 1;
                     parseExp(); //出来应该指到的是]
+                    int newSize = infos.size() - 1;
+                    for (int i = oldInfoSize; i < newSize; i++) {
+                        infos.remove(infos.size() - 1);
+                    } //key:删除在parseExp中加的info，每次移除掉最尾部的即可
                     //getNextToken(); //]
                     getNextToken(); //看是=还是其他
-                    if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp
-                        pos = last_pos;
+                    if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp a[Exp] = exp
+                        pos = lastPos;
                         LVal2Exp();
                         break;
                     } else { //是[Exp]，准备进行下面的parseExp
-                        pos = last_pos;
+                        pos = lastPos;
                     }
                 } else {
                     pos = pos - 1; //回退到ident 可能是函数调用啥的用下面的parse
