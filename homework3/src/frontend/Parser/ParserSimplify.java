@@ -12,19 +12,19 @@ import java.util.Comparator;
 
 public class ParserSimplify {
     private ArrayList<Token> tokenList;
+    private ArrayList<MyError> errorList;
     private boolean isError;
     private int pos;
     private ArrayList<String> infos;
     private int count;
-    private ArrayList<MyError> errorList;
     
     public ParserSimplify(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
+        this.errorList = errorList;
         this.isError = false;
         this.pos = -1;
         this.infos = new ArrayList<>();
         this.count = 0;
-        this.errorList = errorList;
     }
     
     public void parseCompUnit() { //CompUnit → {Decl} {FuncDef} MainFuncDef

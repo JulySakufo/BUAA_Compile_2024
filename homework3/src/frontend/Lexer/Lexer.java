@@ -3,8 +3,6 @@ package frontend.Lexer;
 import frontend.Error.MyError;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -211,10 +209,5 @@ public class Lexer {
     
     public void dealError() throws IOException {
         errorList.add(new MyError(lineNum, "a"));
-//        try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt"))) {
-//            stderr.write(lineNum + " " + "a\n"); //目前只有a类错误
-//        } catch (Exception ignored) {
-//
-//        }
     }
 }
