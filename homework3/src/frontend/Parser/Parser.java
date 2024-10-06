@@ -102,9 +102,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else { //没遇到分号
-                int lastLineNum = getLastToken().getLineNum();
-                int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                dealError(Math.min(lastLineNum, nowLineNum), "i");
+                dealError(getMinErrorLineNum(), "i");
             }
             infos.add("<ConstDecl>");
             return constDecl;
@@ -122,9 +120,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                int lastLineNum = getLastToken().getLineNum();
-                int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                dealError(Math.min(lastLineNum, nowLineNum), "i");
+                dealError(getMinErrorLineNum(), "i");
             }
             infos.add("<VarDecl>");
             return varDecl;
@@ -271,7 +267,6 @@ public class Parser {
         addInfo();
         getNextToken();
         while (peekToken().getTokenType() != TokenType.RBRACE) {
-            //findError(); 不加这个会卡死，说明parseBlockitem后找不到}
             parseBlockItem();
         }
         addInfo();
@@ -367,9 +362,7 @@ public class Parser {
                         addInfo();
                         getNextToken();
                     } else { //没有右括号
-                        int lastLineNum = getLastToken().getLineNum();
-                        int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                        dealError(Math.min(lastLineNum, nowLineNum), "j"); //TODO:括号是j
+                        dealError(getMinErrorLineNum(), "j");
                     }
                 }
             } else { //是primaryExp的ident
@@ -498,114 +491,126 @@ public class Parser {
         infos.add("<ForStmt>");
     }
     
+    public void parseIf() {
+        addInfo();
+        getNextToken(); // (
+        addInfo();
+        getNextToken(); //Cond
+        parseCond();
+        if (peekToken().getTokenType() == TokenType.RPARENT) {
+            addInfo();
+            getNextToken(); //Stmt
+        } else {
+            dealError(peekToken().getLineNum(), "j");
+        }
+        parseStmt();
+        if (peekToken().getTokenType() == TokenType.ELSETK) {
+            addInfo();
+            getNextToken();
+            parseStmt();
+        }
+    }
+    
+    public void parsePrintf() {
+        addInfo();
+        getNextToken(); // (
+        addInfo();
+        getNextToken(); //StringConst
+        addInfo();
+        getNextToken();
+        while (peekToken().getTokenType() == TokenType.COMMA) {
+            addInfo();
+            getNextToken();
+            parseExp();
+        }
+        if (peekToken().getTokenType() == TokenType.RPARENT) {
+            addInfo();
+            getNextToken();
+            if (peekToken().getTokenType() == TokenType.SEMICN) {
+                addInfo();
+                getNextToken();
+            } else { //缺少;
+                dealError(getMinErrorLineNum(), "i");
+            }
+        } else { //缺少)
+            if (peekToken().getTokenType() == TokenType.SEMICN) {
+                dealError(peekToken().getLineNum(), "j");
+                addInfo();
+                getNextToken();
+            } else { //缺少)和;同时犯i,j类错误
+                dealError(getMinErrorLineNum(), "j");
+                dealError(getMinErrorLineNum(), "i");
+            }
+        }
+    }
+    
+    public void parseBreakOrContinue() {
+        addInfo();
+        getNextToken();
+        if (peekToken().getTokenType() == TokenType.SEMICN) {
+            addInfo();
+            getNextToken();
+        } else {
+            dealError(getMinErrorLineNum(), "i");
+        }
+    }
+    
+    public void parseReturn() {
+        addInfo(); //return
+        getNextToken();
+        if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
+                || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
+                || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
+            parseExp();
+        }
+        if (peekToken().getTokenType() == TokenType.SEMICN) {
+            addInfo();
+            getNextToken();
+        } else {
+            dealError(getMinErrorLineNum(), "i");
+        }
+    }
+    
+    public void parseFor() {
+        addInfo();
+        getNextToken(); // (
+        addInfo();
+        getNextToken();
+        if (peekToken().getTokenType() != TokenType.SEMICN) {
+            parseForStmt();
+        }
+        addInfo(); // ;
+        getNextToken();
+        if (peekToken().getTokenType() != TokenType.SEMICN) {
+            parseCond();
+        }
+        addInfo(); // ;
+        getNextToken();
+        if (peekToken().getTokenType() != TokenType.RPARENT) {
+            parseForStmt();
+        }
+        addInfo(); // )
+        getNextToken();
+        parseStmt();
+    }
+    
     public void parseStmt() {
         switch (peekToken().getTokenType()) {
             case IFTK:
-                addInfo();
-                getNextToken(); // (
-                addInfo();
-                getNextToken(); //Cond
-                parseCond();
-                if (peekToken().getTokenType() == TokenType.RPARENT) {
-                    addInfo();
-                    getNextToken(); //Stmt
-                } else {
-                    dealError(peekToken().getLineNum(), "j");
-                }
-                parseStmt();
-                if (peekToken().getTokenType() == TokenType.ELSETK) {
-                    addInfo();
-                    getNextToken();
-                    parseStmt();
-                }
+                parseIf();
                 break;
             case PRINTFTK:
-                addInfo();
-                getNextToken(); // (
-                addInfo();
-                getNextToken(); //StringConst
-                addInfo();
-                getNextToken();
-                while (peekToken().getTokenType() == TokenType.COMMA) {
-                    addInfo();
-                    getNextToken();
-                    parseExp();
-                }
-                if (peekToken().getTokenType() == TokenType.RPARENT) {
-                    addInfo();
-                    getNextToken();
-                    if (peekToken().getTokenType() == TokenType.SEMICN) {
-                        addInfo();
-                        getNextToken();
-                    } else { //缺少;
-                        int lastLineNum = getLastToken().getLineNum();
-                        int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                        dealError(Math.min(lastLineNum, nowLineNum), "i");
-                    }
-                } else { //缺少)
-                    if (peekToken().getTokenType() == TokenType.SEMICN) {
-                        dealError(peekToken().getLineNum(), "j");
-                        addInfo();
-                        getNextToken();
-                    } else { //缺少)和;同时犯i,j类错误
-                        int lastLineNum = getLastToken().getLineNum();
-                        int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                        dealError(Math.min(lastLineNum, nowLineNum), "j");
-                        dealError(Math.min(lastLineNum, nowLineNum), "i");
-                    }
-                }
+                parsePrintf();
                 break;
             case BREAKTK:
             case CONTINUETK:
-                addInfo();
-                getNextToken();
-                if (peekToken().getTokenType() == TokenType.SEMICN) {
-                    addInfo();
-                    getNextToken();
-                } else {
-                    int lastLineNum = getLastToken().getLineNum();
-                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                    dealError(Math.min(lastLineNum, nowLineNum), "i");
-                }
+                parseBreakOrContinue();
                 break;
             case RETURNTK:
-                addInfo(); //return
-                getNextToken();
-                if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
-                        || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
-                        || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
-                    parseExp();
-                }
-                if (peekToken().getTokenType() == TokenType.SEMICN) {
-                    addInfo();
-                    getNextToken();
-                } else {
-                    int lastLineNum = getLastToken().getLineNum();
-                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                    dealError(Math.min(lastLineNum, nowLineNum), "i");
-                }
+                parseReturn();
                 break;
             case FORTK:
-                addInfo();
-                getNextToken(); // (
-                addInfo();
-                getNextToken();
-                if (peekToken().getTokenType() != TokenType.SEMICN) {
-                    parseForStmt();
-                }
-                addInfo(); // ;
-                getNextToken();
-                if (peekToken().getTokenType() != TokenType.SEMICN) {
-                    parseCond();
-                }
-                addInfo(); // ;
-                getNextToken();
-                if (peekToken().getTokenType() != TokenType.RPARENT) {
-                    parseForStmt();
-                }
-                addInfo(); // )
-                getNextToken();
-                parseStmt();
+                parseFor();
                 break;
             case LBRACE:
                 parseBlock();
@@ -617,15 +622,14 @@ public class Parser {
                     pos = pos - 1; //回退到ident
                     LVal2Exp();
                     break;
-                } else if (peekToken().getTokenType() == TokenType.LBRACK) { //a[ TODO：又臭又长的代码，记得优化
+                } else if (peekToken().getTokenType() == TokenType.LBRACK) { //a[
                     getNextToken(); //exp
                     int oldInfoSize = infos.size() - 1;
                     parseExp(); //出来应该指到的是]
                     int newSize = infos.size() - 1;
                     for (int i = oldInfoSize; i < newSize; i++) {
                         infos.remove(infos.size() - 1);
-                    } //key:删除在parseExp中加的info，每次移除掉最尾部的即可
-                    //getNextToken(); //]
+                    } //删除在parseExp中加的info，每次移除掉最尾部的即可
                     getNextToken(); //看是=还是其他
                     if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp a[Exp] = exp
                         pos = lastPos;
@@ -635,10 +639,9 @@ public class Parser {
                         pos = lastPos;
                     }
                 } else {
-                    pos = pos - 1; //回退到ident 可能是函数调用啥的用下面的parse
+                    pos = pos - 1; //回退到ident 可能是函数调用啥的用下面的parseExp
                 }
-            default:
-                //findError(); 不加会死循环
+            default: //[Exp];
                 if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                         || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                         || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
@@ -648,15 +651,13 @@ public class Parser {
                     addInfo();
                     getNextToken();
                 } else {
-                    int lastLineNum = getLastToken().getLineNum();
-                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                    dealError(Math.min(lastLineNum, nowLineNum), "i");
+                    dealError(getMinErrorLineNum(), "i");
                 }
         }
         infos.add("<Stmt>");
     }
     
-    public void LVal2Exp() {
+    public void LVal2Exp() { //处理getint|getchar
         parseLVal();
         addInfo(); // =
         getNextToken();
@@ -672,9 +673,7 @@ public class Parser {
                     addInfo();
                     getNextToken();
                 } else {
-                    int lastLineNum = getLastToken().getLineNum();
-                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                    dealError(Math.min(lastLineNum, nowLineNum), "i");
+                    dealError(getMinErrorLineNum(), "i");
                 }
             } else {
                 if (peekToken().getTokenType() == TokenType.SEMICN) {
@@ -682,10 +681,8 @@ public class Parser {
                     addInfo();
                     getNextToken();
                 } else {
-                    int lastLineNum = getLastToken().getLineNum();
-                    int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                    dealError(Math.min(lastLineNum, nowLineNum), "j");
-                    dealError(Math.min(lastLineNum, nowLineNum), "i");
+                    dealError(getMinErrorLineNum(), "j");
+                    dealError(getMinErrorLineNum(), "i");
                 }
             }
         } else {
@@ -694,9 +691,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                int lastLineNum = getLastToken().getLineNum();
-                int nowLineNum = peekToken().getLineNum(); //取两者小的那个，因为分号一定在上一行
-                dealError(Math.min(lastLineNum, nowLineNum), "i");
+                dealError(getMinErrorLineNum(), "i");
             }
         }
     }
@@ -722,17 +717,7 @@ public class Parser {
         return tokenList.get(pos - 1);
     }
     
-    public void findError() {
-        count++;
-        if (count >= 40000) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("error.txt"))) {
-                for (String info : infos) {
-                    stdout.write(info + "\n");
-                }
-            } catch (Exception ignored) {
-            
-            }
-            System.exit(0);
-        }
+    public int getMinErrorLineNum() { //取两者小的那个，因为分号一定在上一行
+        return Math.min(getLastToken().getLineNum(), peekToken().getLineNum());
     }
 }
