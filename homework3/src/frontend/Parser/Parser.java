@@ -16,7 +16,7 @@ public class Parser {
     private boolean isError;
     private int pos;
     private ArrayList<String> infos;
-    private int count;
+    private SyntaxNode root; //语法树的根节点
     
     public Parser(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
@@ -24,23 +24,22 @@ public class Parser {
         this.isError = false;
         this.pos = -1;
         this.infos = new ArrayList<>();
-        this.count = 0;
+        this.root = new SyntaxNode("compUnit");
     }
     
     public void parseCompUnit() { //CompUnit → {Decl} {FuncDef} MainFuncDef
-        CompUnit compUnit = new CompUnit();
-        getNextToken(); //Decl → ConstDecl | VarDecl
+        getNextToken();
         while (peekToken().getTokenType() == TokenType.CONSTTK || peekToken().getTokenType() == TokenType.INTTK
-                || peekToken().getTokenType() == TokenType.CHARTK) { // {Decl}
+                || peekToken().getTokenType() == TokenType.CHARTK) {
             if (peekToken().getTokenType() == TokenType.CONSTTK) { //一定是变量声明
-                compUnit.addDecl(parseDecl());
+                root.addChild(parseDecl());
             } else { //可能是变量声明，可能不是
                 getNextToken(); //int a || int a() || int main()
                 if (peekToken().getTokenType() == TokenType.IDENFR) { //int a || int a() var|func
                     getNextToken();
                     if (peekToken().getTokenType() != TokenType.LPARENT) { // var
                         pos = pos - 2; //回退到int | char上
-                        compUnit.addDecl(parseDecl());
+                        root.addChild(parseDecl());
                     } else { //func,准备进行func识别
                         pos = pos - 2;
                         break;
@@ -56,13 +55,13 @@ public class Parser {
             getNextToken();
             if (peekToken().getTokenType() == TokenType.IDENFR) { //不是mainFuncDef
                 pos = pos - 1;
-                parseFuncDef();
+                root.addChild(parseFuncDef());
             } else { //int main
                 pos = pos - 1;
                 break;
             }
         }
-        parseMainFuncDef();
+        root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
         if (!isError) {
             try (BufferedWriter stdout = new BufferedWriter(new FileWriter("parser.txt"))) {
@@ -84,80 +83,96 @@ public class Parser {
         }
     }
     
-    public Decl parseDecl() {
+    public SyntaxNode parseDecl() {
+        SyntaxNode node = new SyntaxNode("Decl");
         Token curToken = peekToken();
         addInfo(); //const | int | char
         if (curToken.getTokenType() == TokenType.CONSTTK) {
-            ConstDecl constDecl = new ConstDecl();
-            constDecl.setType(getNextToken().getToken());
+            SyntaxNode child = new SyntaxNode("ConstDecl");
+            node.addChild(child);
+            child.addChild(new SyntaxNode("const"));
+            getNextToken();
             addInfo(); // int | char
+            child.addChild(new SyntaxNode(peekToken().getToken())); // int | char
             getNextToken(); //指向下一个
-            constDecl.addConstDef(parseConstDef());
+            child.addChild(parseConstDef());
             while (peekToken().getTokenType() == TokenType.COMMA) {
                 addInfo();
+                child.addChild(new SyntaxNode(","));
                 getNextToken();
-                constDecl.addConstDef(parseConstDef());
+                child.addChild(parseConstDef());
             }
             if (peekToken().getTokenType() == TokenType.SEMICN) { //遇到;结束
                 addInfo();
+                child.addChild(new SyntaxNode(";"));
                 getNextToken();
             } else { //没遇到分号
                 dealError(getMinErrorLineNum(), "i");
             }
             infos.add("<ConstDecl>");
-            return constDecl;
+            return node;
         } else {
-            VarDecl varDecl = new VarDecl();
-            varDecl.setType(peekToken().getToken()); //int | char
+            SyntaxNode child = new SyntaxNode("VarDecl");
+            node.addChild(child);
+            child.addChild(new SyntaxNode(peekToken().getToken())); //int | char
             getNextToken(); // varDef
-            varDecl.addVarDef(parseVarDef());
+            child.addChild(parseVarDef());
             while (peekToken().getTokenType() == TokenType.COMMA) {
                 addInfo();
+                child.addChild(new SyntaxNode(","));
                 getNextToken();
-                varDecl.addVarDef(parseVarDef());
+                child.addChild(parseVarDef());
             }
             if (peekToken().getTokenType() == TokenType.SEMICN) {
                 addInfo();
+                child.addChild(new SyntaxNode(";"));
                 getNextToken();
             } else {
                 dealError(getMinErrorLineNum(), "i");
             }
             infos.add("<VarDecl>");
-            return varDecl;
+            return node;
         }
     }
     
-    public ConstDef parseConstDef() {
-        addInfo();
-        ConstDef constDef = new ConstDef(peekToken().getToken()); //标识符
+    public SyntaxNode parseConstDef() {
+        SyntaxNode node = new SyntaxNode("ConstDef");
+        node.addChild(new SyntaxNode(peekToken().getToken()));
+        addInfo(); //标识符
         getNextToken();
         if (peekToken().getTokenType() == TokenType.LBRACK) {
             addInfo();
+            node.addChild(new SyntaxNode("["));
             getNextToken();
-            /*TODO:语法树有点不会写了，先写与这次输出相关的吧，后面来补语法树*/
-            parseConstExp();
+            node.addChild(parseConstExp());
             if (peekToken().getTokenType() == TokenType.RBRACK) {
                 addInfo();
+                node.addChild(new SyntaxNode("]"));
                 getNextToken();
             } else {
                 dealError(peekToken().getLineNum(), "k");
             }
         }
         addInfo(); // =
+        node.addChild(new SyntaxNode("="));
         getNextToken();
-        parseConstInitVal();
+        node.addChild(parseConstInitVal());
         infos.add("<ConstDef>");
-        return null;
+        return node;
     }
     
-    public VarDef parseVarDef() {
+    public SyntaxNode parseVarDef() {
+        SyntaxNode node = new SyntaxNode("VarDef");
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo(); //ident
         getNextToken();
         if (peekToken().getTokenType() == TokenType.LBRACK) {
+            node.addChild(new SyntaxNode("["));
             addInfo();
             getNextToken();
-            parseConstExp();
+            node.addChild(parseConstExp());
             if (peekToken().getTokenType() == TokenType.RBRACK) {
+                node.addChild(new SyntaxNode("]"));
                 addInfo();
                 getNextToken();
             } else {
@@ -165,142 +180,184 @@ public class Parser {
             }
         }
         if (peekToken().getTokenType() == TokenType.ASSIGN) {
+            node.addChild(new SyntaxNode("="));
             addInfo();
             getNextToken();
-            parseInitVal();
+            node.addChild(parseInitVal());
         }
         infos.add("<VarDef>");
-        return null;
+        return node;
     }
     
-    public void parseConstInitVal() {
+    public SyntaxNode parseConstInitVal() {
+        SyntaxNode node = new SyntaxNode("ConstInitVal");
         if (peekToken().getTokenType() == TokenType.LBRACE) {
+            node.addChild(new SyntaxNode("{"));
             addInfo();
             getNextToken();
             if (peekToken().getTokenType() != TokenType.RBRACE) { //{1,2}不是{}的情况
-                parseConstExp();
+                node.addChild(parseConstExp());
                 while (peekToken().getTokenType() == TokenType.COMMA) {
+                    node.addChild(new SyntaxNode(","));
                     addInfo();
                     getNextToken();
-                    parseConstExp();
+                    node.addChild(parseConstExp());
                 }
             } //考虑constInitVal的集合情况为空
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo(); // }
             getNextToken();
         } else if (peekToken().getTokenType() == TokenType.STRCON) {
+            /*TODO:未添加节点的，不知道怎么写了，待完成*/
             addInfo();
             getNextToken();
         } else { //ConstExp
-            parseConstExp();
+            node.addChild(parseConstExp());
         }
         infos.add("<ConstInitVal>");
+        return node;
     }
     
-    public void parseInitVal() {
+    public SyntaxNode parseInitVal() {
+        SyntaxNode node = new SyntaxNode("InitVal");
         if (peekToken().getTokenType() == TokenType.LBRACE) {
+            node.addChild(new SyntaxNode("{"));
             addInfo();
             getNextToken();
             if (peekToken().getTokenType() != TokenType.RBRACE) {
-                parseExp();
+                node.addChild(parseExp());
                 while (peekToken().getTokenType() == TokenType.COMMA) {
+                    node.addChild(new SyntaxNode(","));
                     addInfo();
                     getNextToken();
-                    parseExp();
+                    node.addChild(parseExp());
                 }
             } //考虑int a[2] = {};的情况
+            node.addChild(new SyntaxNode("}"));
             addInfo(); // }
             getNextToken();
         } else if (peekToken().getTokenType() == TokenType.STRCON) {
+            /*TODO:未添加节点的，不知道怎么写了，待完成*/
             addInfo();
             getNextToken();
         } else { //ConstExp
-            parseExp();
+            node.addChild(parseExp());
         }
         infos.add("<InitVal>");
+        return node;
     }
     
-    public void parseFuncDef() {
+    public SyntaxNode parseFuncDef() {
+        SyntaxNode node = new SyntaxNode("FuncDef");
+        SyntaxNode child = new SyntaxNode("FuncType");
+        node.addChild(child); //funcdef-functype
+        child.addChild(new SyntaxNode(peekToken().getToken())); //functype-int|char
         addInfo();
         infos.add("<FuncType>");
         getNextToken(); //ident
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
         getNextToken(); //(
+        node.addChild(new SyntaxNode("("));
         addInfo();
         getNextToken();
         if (peekToken().getTokenType() == TokenType.RPARENT) {
             addInfo();
+            node.addChild(new SyntaxNode(")"));
             getNextToken();
-            parseBlock();
+            node.addChild(parseBlock());
         } else {
             if (peekToken().getTokenType() == TokenType.INTTK || peekToken().getTokenType() == TokenType.CHARTK) { //FuncFParams
-                parseFuncFParams();
+                node.addChild(parseFuncFParams());
                 if (peekToken().getTokenType() == TokenType.RPARENT) {
+                    node.addChild(new SyntaxNode(")"));
                     addInfo();
                     getNextToken();
                 } else {
                     dealError(peekToken().getLineNum(), "j");
                 }
             }
-            parseBlock();
+            node.addChild(parseBlock());
         }
         infos.add("<FuncDef>");
+        return node;
     }
     
-    public void parseMainFuncDef() { // 'int' 'main' '(' ')' Block // j
+    public SyntaxNode parseMainFuncDef() { // 'int' 'main' '(' ')' Block // j
+        SyntaxNode node = new SyntaxNode("MainFuncDef");
+        node.addChild(new SyntaxNode("int"));
         addInfo(); // int
         getNextToken(); //main
+        node.addChild(new SyntaxNode("main"));
         addInfo();
         getNextToken(); // (
+        node.addChild(new SyntaxNode("("));
         addInfo();
         getNextToken();
         if (peekToken().getTokenType() == TokenType.RPARENT) {
+            node.addChild(new SyntaxNode(")"));
             addInfo();
             getNextToken(); //BLOCK
         } else {
             dealError(peekToken().getLineNum(), "j");
         }
-        parseBlock();
+        node.addChild(parseBlock());
         infos.add("<MainFuncDef>");
+        return node;
     }
     
-    public void parseBlock() {
-        addInfo();
+    public SyntaxNode parseBlock() {
+        SyntaxNode node = new SyntaxNode("Block");
+        node.addChild(new SyntaxNode("{"));
+        addInfo(); //{
         getNextToken();
         while (peekToken().getTokenType() != TokenType.RBRACE) {
-            parseBlockItem();
+            node.addChild(parseBlockItem());
         }
+        node.addChild(new SyntaxNode("}"));
         addInfo();
         getNextToken();
         infos.add("<Block>");
+        return node;
     }
     
-    public void parseBlockItem() {
+    public SyntaxNode parseBlockItem() {
+        SyntaxNode node = new SyntaxNode("BlockItem");
         if (peekToken().getTokenType() == TokenType.CONSTTK || peekToken().getTokenType() == TokenType.INTTK || peekToken().getTokenType() == TokenType.CHARTK) {
-            parseDecl();
+            node.addChild(parseDecl());
         } else {
-            parseStmt();
+            node.addChild(parseStmt());
         }
+        return node;
     }
     
-    public void parseFuncFParams() { // FuncFParam{,FuncFParam}
-        parseFuncFParam();
+    public SyntaxNode parseFuncFParams() { // FuncFParam{,FuncFParam}
+        SyntaxNode node = new SyntaxNode("FuncFParams");
+        node.addChild(parseFuncFParam());
         while (peekToken().getTokenType() == TokenType.COMMA) {
+            node.addChild(new SyntaxNode(","));
             addInfo();
             getNextToken();
-            parseFuncFParam();
+            node.addChild(parseFuncFParam());
         }
         infos.add("<FuncFParams>");
+        return node;
     }
     
-    public void parseFuncFParam() {
+    public SyntaxNode parseFuncFParam() {
+        SyntaxNode node = new SyntaxNode("FuncFParam");
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
         getNextToken(); //ident
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
         getNextToken(); //[或者nothing
         if (peekToken().getTokenType() == TokenType.LBRACK) {
+            node.addChild(new SyntaxNode("["));
             addInfo();
             getNextToken();
             if (peekToken().getTokenType() == TokenType.RBRACK) {
+                node.addChild(new SyntaxNode("]"));
                 addInfo();
                 getNextToken();
             } else {
@@ -308,57 +365,74 @@ public class Parser {
             }
         } //始终指向下一个未分析的token
         infos.add("<FuncFParam>");
+        return node;
     }
     
-    public void parseConstExp() {
-        parseAddExp();
+    public SyntaxNode parseConstExp() {
+        SyntaxNode node = new SyntaxNode("ConstExp");
+        node.addChild(parseAddExp());
         infos.add("<ConstExp>");
+        return node;
     }
     
-    public void parseAddExp() { //MulExp{+-MulExp}
-        parseMulExp();
+    public SyntaxNode parseAddExp() { //MulExp{+-MulExp}
+        SyntaxNode node = new SyntaxNode("AddExp");
+        node.addChild(parseMulExp());
         infos.add("<AddExp>");
         while (peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU) {
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            parseMulExp();
+            node.addChild(parseMulExp());
             infos.add("<AddExp>");
         }
+        return node;
     }
     
-    public void parseMulExp() { //UnaryExp{*/%UnaryExp}
-        parseUnaryExp();
+    public SyntaxNode parseMulExp() { //UnaryExp{*/%UnaryExp}
+        SyntaxNode node = new SyntaxNode("MulExp");
+        node.addChild(parseUnaryExp());
         infos.add("<MulExp>");
         while (peekToken().getTokenType() == TokenType.MULT || peekToken().getTokenType() == TokenType.DIV || peekToken().getTokenType() == TokenType.MOD) {
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            parseUnaryExp();
+            node.addChild(parseUnaryExp());
             infos.add("<MulExp>");
         }
+        return node;
     }
     
-    public void parseUnaryExp() {
+    public SyntaxNode parseUnaryExp() {
+        SyntaxNode node = new SyntaxNode("UnaryExp");
         if (peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
+            SyntaxNode child = new SyntaxNode("UnaryOp");
+            node.addChild(child); //UnaryExp-UnaryOp
+            child.addChild(new SyntaxNode(peekToken().getToken())); //UnaryOp-(+|-)
             addInfo();
             infos.add("<UnaryOp>");
             getNextToken();
-            parseUnaryExp();
+            node.addChild(parseUnaryExp());
         } else if (peekToken().getTokenType() == TokenType.IDENFR) { //ident ([FuncParams])
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken(); //判断是否是(
             if (peekToken().getTokenType() == TokenType.LPARENT) {
+                node.addChild(new SyntaxNode("("));
                 addInfo();
                 getNextToken();
                 if (peekToken().getTokenType() == TokenType.RPARENT) {
+                    node.addChild(new SyntaxNode(")"));
                     addInfo();
                     getNextToken();
                 } else {
                     if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                             || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                             || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
-                        parseFuncRParams(); //实参的第一个字符可能的情况
+                        node.addChild(parseFuncRParams()); //实参的第一个字符可能的情况
                     }
                     if (peekToken().getTokenType() == TokenType.RPARENT) { // )
+                        node.addChild(new SyntaxNode(")"));
                         addInfo();
                         getNextToken();
                     } else { //没有右括号
@@ -367,48 +441,64 @@ public class Parser {
                 }
             } else { //是primaryExp的ident
                 pos--; //指到ident
+                node.removeChild();
                 infos.remove(infos.size() - 1); //将之前的info移除，到primaryExp再添加
-                parsePrimaryExp();
+                node.addChild(parsePrimaryExp());
             }
         } else { //primaryExp
-            parsePrimaryExp();
+            node.addChild(parsePrimaryExp());
         }
         infos.add("<UnaryExp>");
+        return node;
     }
     
-    public void parsePrimaryExp() {
+    public SyntaxNode parsePrimaryExp() {
+        SyntaxNode node = new SyntaxNode("PrimaryExp");
         if (peekToken().getTokenType() == TokenType.LPARENT) { //(Exp)
+            node.addChild(new SyntaxNode("("));
             addInfo();
             getNextToken();
-            parseExp();
+            node.addChild(parseExp());
             if (peekToken().getTokenType() == TokenType.RPARENT) {
+                node.addChild(new SyntaxNode(")"));
                 addInfo();
                 getNextToken();
             } else {
                 dealError(peekToken().getLineNum(), "j");
             }
         } else if (peekToken().getTokenType() == TokenType.INTCON) {
+            SyntaxNode child = new SyntaxNode("Number");
+            node.addChild(child);
+            child.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
             infos.add("<Number>");
         } else if (peekToken().getTokenType() == TokenType.CHRCON) {
+            SyntaxNode child = new SyntaxNode("Character");
+            node.addChild(child);
+            child.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
             infos.add("<Character>");
         } else { // LVal
-            parseLVal();
+            node.addChild(parseLVal());
         }
         infos.add("<PrimaryExp>");
+        return node;
     }
     
-    public void parseLVal() { // ident['['Exp']']
+    public SyntaxNode parseLVal() { // ident['['Exp']']
+        SyntaxNode node = new SyntaxNode("LVal");
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo(); //ident
         getNextToken();
         if (peekToken().getTokenType() == TokenType.LBRACK) {
+            node.addChild(new SyntaxNode("["));
             addInfo();
             getNextToken();
-            parseExp();
+            node.addChild(parseExp());
             if (peekToken().getTokenType() == TokenType.RBRACK) {
+                node.addChild(new SyntaxNode("]"));
                 addInfo();
                 getNextToken();
             } else {
@@ -416,117 +506,150 @@ public class Parser {
             }
         }
         infos.add("<LVal>");
+        return node;
     }
     
-    public void parseFuncRParams() { //Exp{,Exp}
-        parseExp();
+    public SyntaxNode parseFuncRParams() { //Exp{,Exp}
+        SyntaxNode node = new SyntaxNode("FuncRParams");
+        node.addChild(parseExp());
         while (peekToken().getTokenType() == TokenType.COMMA) {
+            node.addChild(new SyntaxNode(","));
             addInfo();
             getNextToken();
-            parseExp();
+            node.addChild(parseExp());
         }
         infos.add("<FuncRParams>");
+        return node;
     }
     
-    public void parseExp() {
-        parseAddExp();
+    public SyntaxNode parseExp() {
+        SyntaxNode node = new SyntaxNode("Exp");
+        node.addChild(parseAddExp());
         infos.add("<Exp>");
+        return node;
     }
     
-    public void parseRelExp() { //AddExp{<><=>=AddExp}
-        parseAddExp();
+    public SyntaxNode parseRelExp() { //AddExp{<><=>=AddExp}
+        SyntaxNode node = new SyntaxNode("RelExp");
+        node.addChild(parseAddExp());
         infos.add("<RelExp>");
         while (peekToken().getTokenType() == TokenType.LSS || peekToken().getTokenType() == TokenType.GRE
                 || peekToken().getTokenType() == TokenType.LEQ || peekToken().getTokenType() == TokenType.GEQ) {
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            parseAddExp();
+            node.addChild(parseAddExp());
             infos.add("<RelExp>");
         }
+        return node;
     }
     
-    public void parseEqExp() { //RelExp{==!=RelExp}
-        parseRelExp();
+    public SyntaxNode parseEqExp() { //RelExp{==!=RelExp}
+        SyntaxNode node = new SyntaxNode("EqExp");
+        node.addChild(parseRelExp());
         infos.add("<EqExp>");
         while (peekToken().getTokenType() == TokenType.EQL || peekToken().getTokenType() == TokenType.NEQ) {
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            parseRelExp();
+            node.addChild(parseRelExp());
             infos.add("<EqExp>");
         }
+        return node;
     }
     
-    public void parseLAndExp() { //EqExp{&&EqExp}
-        parseEqExp();
+    public SyntaxNode parseLAndExp() { //EqExp{&&EqExp}
+        SyntaxNode node = new SyntaxNode("LAndExp");
+        node.addChild(parseEqExp());
         infos.add("<LAndExp>");
         while (peekToken().getTokenType() == TokenType.AND) {
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            parseEqExp();
+            node.addChild(parseEqExp());
             infos.add("<LAndExp>");
         }
+        return node;
     }
     
-    public void parseLOrExp() {
-        parseLAndExp();
+    public SyntaxNode parseLOrExp() {
+        SyntaxNode node = new SyntaxNode("LOrExp");
+        node.addChild(parseLAndExp());
         infos.add("<LOrExp>");
         while (peekToken().getTokenType() == TokenType.OR) {
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            parseLAndExp();
+            node.addChild(parseLAndExp());
             infos.add("<LOrExp>");
         }
+        return node;
     }
     
-    public void parseCond() {
-        parseLOrExp();
+    public SyntaxNode parseCond() {
+        SyntaxNode node = new SyntaxNode("Cond");
+        node.addChild(parseLOrExp());
         infos.add("<Cond>");
+        return node;
     }
     
-    public void parseForStmt() {
-        parseLVal();
+    public SyntaxNode parseForStmt() {
+        SyntaxNode node = new SyntaxNode("ForStmt");
+        node.addChild(parseLVal());
+        node.addChild(new SyntaxNode("="));
         addInfo();// =
         getNextToken();
-        parseExp();
+        node.addChild(parseExp());
         infos.add("<ForStmt>");
+        return node;
     }
     
-    public void parseIf() {
+    public void parseIf(SyntaxNode node) {
+        node.addChild(new SyntaxNode("if"));
         addInfo();
         getNextToken(); // (
+        node.addChild(new SyntaxNode("("));
         addInfo();
         getNextToken(); //Cond
-        parseCond();
+        node.addChild(parseCond());
         if (peekToken().getTokenType() == TokenType.RPARENT) {
+            node.addChild(new SyntaxNode(")"));
             addInfo();
             getNextToken(); //Stmt
         } else {
             dealError(peekToken().getLineNum(), "j");
         }
-        parseStmt();
+        node.addChild(parseStmt());
         if (peekToken().getTokenType() == TokenType.ELSETK) {
+            node.addChild(new SyntaxNode("else"));
             addInfo();
             getNextToken();
-            parseStmt();
+            node.addChild(parseStmt());
         }
     }
     
-    public void parsePrintf() {
+    public void parsePrintf(SyntaxNode node) {
+        node.addChild(new SyntaxNode("printf"));
         addInfo();
         getNextToken(); // (
+        node.addChild(new SyntaxNode("("));
         addInfo();
         getNextToken(); //StringConst
+        /*TODO:不知道怎么写，待完成*/
         addInfo();
         getNextToken();
         while (peekToken().getTokenType() == TokenType.COMMA) {
+            node.addChild(new SyntaxNode(","));
             addInfo();
             getNextToken();
-            parseExp();
+            node.addChild(parseExp());
         }
         if (peekToken().getTokenType() == TokenType.RPARENT) {
+            node.addChild(new SyntaxNode(")"));
             addInfo();
             getNextToken();
             if (peekToken().getTokenType() == TokenType.SEMICN) {
+                node.addChild(new SyntaxNode(";"));
                 addInfo();
                 getNextToken();
             } else { //缺少;
@@ -535,6 +658,7 @@ public class Parser {
         } else { //缺少)
             if (peekToken().getTokenType() == TokenType.SEMICN) {
                 dealError(peekToken().getLineNum(), "j");
+                node.addChild(new SyntaxNode(";"));
                 addInfo();
                 getNextToken();
             } else { //缺少)和;同时犯i,j类错误
@@ -544,10 +668,12 @@ public class Parser {
         }
     }
     
-    public void parseBreakOrContinue() {
+    public void parseBreakOrContinue(SyntaxNode node) {
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
         getNextToken();
         if (peekToken().getTokenType() == TokenType.SEMICN) {
+            node.addChild(new SyntaxNode(";"));
             addInfo();
             getNextToken();
         } else {
@@ -555,15 +681,17 @@ public class Parser {
         }
     }
     
-    public void parseReturn() {
+    public void parseReturn(SyntaxNode node) {
+        node.addChild(new SyntaxNode("return"));
         addInfo(); //return
         getNextToken();
         if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                 || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                 || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
-            parseExp();
+            node.addChild(parseExp());
         }
         if (peekToken().getTokenType() == TokenType.SEMICN) {
+            node.addChild(new SyntaxNode(";"));
             addInfo();
             getNextToken();
         } else {
@@ -571,56 +699,62 @@ public class Parser {
         }
     }
     
-    public void parseFor() {
+    public void parseFor(SyntaxNode node) {
+        node.addChild(new SyntaxNode("for"));
         addInfo();
         getNextToken(); // (
+        node.addChild(new SyntaxNode("("));
         addInfo();
         getNextToken();
         if (peekToken().getTokenType() != TokenType.SEMICN) {
-            parseForStmt();
+            node.addChild(parseForStmt());
         }
+        node.addChild(new SyntaxNode(";"));
         addInfo(); // ;
         getNextToken();
         if (peekToken().getTokenType() != TokenType.SEMICN) {
-            parseCond();
+            node.addChild(parseCond());
         }
+        node.addChild(new SyntaxNode(";"));
         addInfo(); // ;
         getNextToken();
         if (peekToken().getTokenType() != TokenType.RPARENT) {
-            parseForStmt();
+            node.addChild(parseForStmt());
         }
+        node.addChild(new SyntaxNode(")"));
         addInfo(); // )
         getNextToken();
-        parseStmt();
+        node.addChild(parseStmt());
     }
     
-    public void parseStmt() {
+    public SyntaxNode parseStmt() {
+        SyntaxNode node = new SyntaxNode("Stmt");
         switch (peekToken().getTokenType()) {
             case IFTK:
-                parseIf();
+                parseIf(node);
                 break;
             case PRINTFTK:
-                parsePrintf();
+                parsePrintf(node);
                 break;
             case BREAKTK:
             case CONTINUETK:
-                parseBreakOrContinue();
+                parseBreakOrContinue(node);
                 break;
             case RETURNTK:
-                parseReturn();
+                parseReturn(node);
                 break;
             case FORTK:
-                parseFor();
+                parseFor(node);
                 break;
             case LBRACE:
-                parseBlock();
+                node.addChild(parseBlock());
                 break;
             case IDENFR:
                 int lastPos = pos; //标识符的位置
                 getNextToken(); // a[   ||  a = ， a=一定是LVal = exp的形式，a[还要判断
                 if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = exp
                     pos = pos - 1; //回退到ident
-                    LVal2Exp();
+                    LVal2Exp(node);
                     break;
                 } else if (peekToken().getTokenType() == TokenType.LBRACK) { //a[
                     getNextToken(); //exp
@@ -633,7 +767,7 @@ public class Parser {
                     getNextToken(); //看是=还是其他
                     if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp a[Exp] = exp
                         pos = lastPos;
-                        LVal2Exp();
+                        LVal2Exp(node);
                         break;
                     } else { //是[Exp]，准备进行下面的parseExp
                         pos = lastPos;
@@ -645,9 +779,10 @@ public class Parser {
                 if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                         || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                         || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
-                    parseExp();
+                    node.addChild(parseExp());
                 }
                 if (peekToken().getTokenType() == TokenType.SEMICN) {
+                    node.addChild(new SyntaxNode(";"));
                     addInfo();
                     getNextToken();
                 } else {
@@ -655,21 +790,27 @@ public class Parser {
                 }
         }
         infos.add("<Stmt>");
+        return node;
     }
     
-    public void LVal2Exp() { //处理getint|getchar
-        parseLVal();
+    public void LVal2Exp(SyntaxNode node) { //处理getint|getchar
+        node.addChild(parseLVal());
+        node.addChild(new SyntaxNode("="));
         addInfo(); // =
         getNextToken();
         if (peekToken().getTokenType() == TokenType.GETINTTK || peekToken().getTokenType() == TokenType.GETCHARTK) {
+            node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();// (
+            node.addChild(new SyntaxNode("("));
             addInfo();
             getNextToken();
             if (peekToken().getTokenType() == TokenType.RPARENT) {
+                node.addChild(new SyntaxNode(")"));
                 addInfo();
                 getNextToken();
                 if (peekToken().getTokenType() == TokenType.SEMICN) {
+                    node.addChild(new SyntaxNode(";"));
                     addInfo();
                     getNextToken();
                 } else {
@@ -678,6 +819,7 @@ public class Parser {
             } else {
                 if (peekToken().getTokenType() == TokenType.SEMICN) {
                     dealError(peekToken().getLineNum(), "j");
+                    node.addChild(new SyntaxNode(";"));
                     addInfo();
                     getNextToken();
                 } else {
@@ -686,8 +828,9 @@ public class Parser {
                 }
             }
         } else {
-            parseExp();
+            node.addChild(parseExp());
             if (peekToken().getTokenType() == TokenType.SEMICN) {
+                node.addChild(new SyntaxNode(";"));
                 addInfo();
                 getNextToken();
             } else {

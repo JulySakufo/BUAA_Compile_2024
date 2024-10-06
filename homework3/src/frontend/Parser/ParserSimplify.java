@@ -65,7 +65,7 @@ public class ParserSimplify {
         parseMainFuncDef();
         infos.add("<CompUnit>");
         if (!isError) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("parser.txt"))) {
+            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\parser.txt"))) {
                 for (String info : infos) {
                     stdout.write(info + "\n");
                 }
@@ -74,7 +74,7 @@ public class ParserSimplify {
             }
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
-            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("error.txt", true))) {
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt", true))) {
                 for (MyError error : errorList) {
                     stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
