@@ -9,6 +9,8 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class Parser {
     private ArrayList<Token> tokenList;
@@ -64,16 +66,17 @@ public class Parser {
         root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
         if (!isError) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("parser.txt"))) {
+            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\parser.txt"))) {
                 for (String info : infos) {
                     stdout.write(info + "\n");
                 }
+                printTree();
             } catch (Exception ignored) {
             
             }
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
-            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("error.txt", true))) {
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt", true))) {
                 for (MyError error : errorList) {
                     stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
@@ -862,5 +865,24 @@ public class Parser {
     
     public int getMinErrorLineNum() { //取两者小的那个，因为分号一定在上一行
         return Math.min(getLastToken().getLineNum(), peekToken().getLineNum());
+    }
+    
+    public void printTree() {
+        Queue<SyntaxNode> queue = new LinkedList<>();
+        queue.add(root);
+        Queue<SyntaxNode> temp = new LinkedList<>();
+        while (!queue.isEmpty()) {
+            int size = queue.size();
+            for (int i = 0; i < size; i++) {
+                SyntaxNode node = queue.poll();
+                System.out.print(node.getName()+" ");
+                for (SyntaxNode child : node.getChildren()) {
+                    temp.add(child);
+                }
+            }
+            queue.addAll(temp);
+            temp.clear();
+            System.out.println();
+        }
     }
 }

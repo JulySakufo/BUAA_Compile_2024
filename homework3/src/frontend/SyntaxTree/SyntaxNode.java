@@ -26,15 +26,4 @@ public class SyntaxNode {
     public ArrayList<SyntaxNode> getChildren() {
         return children;
     }
-    
-    public void print() {
-        System.out.println(name);
-        if (!children.isEmpty()) {
-            System.out.println("└─");
-            for (SyntaxNode child : children) {
-                child.print();
-                System.out.println("   ");
-            }
-        }
-    }
 }
