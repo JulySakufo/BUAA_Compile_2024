@@ -1,6 +1,5 @@
 import frontend.Lexer.Lexer;
 import frontend.Parser.Parser;
-import frontend.Parser.ParserSimplify;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
