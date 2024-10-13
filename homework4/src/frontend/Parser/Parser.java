@@ -70,7 +70,6 @@ public class Parser {
                 for (String info : infos) {
                     stdout.write(info + "\n");
                 }
-                printTree();
             } catch (Exception ignored) {
             
             }
