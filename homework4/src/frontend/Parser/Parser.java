@@ -3,14 +3,13 @@ package frontend.Parser;
 import frontend.Error.MyError;
 import frontend.Lexer.Token;
 import frontend.Lexer.TokenType;
+import frontend.SymbolTable.Symbol;
+import frontend.SymbolTable.SymbolTable;
 import frontend.SyntaxTree.*;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
 public class Parser {
     private ArrayList<Token> tokenList;
@@ -19,6 +18,13 @@ public class Parser {
     private int pos;
     private ArrayList<String> infos;
     private SyntaxNode root; //语法树的根节点
+    private HashMap<Integer, SymbolTable> symbolTables; //记录每个符号表的信息level-table
+    private Stack<SymbolTable> stack; //栈式符号表，记录当前栈的
+    private int level;
+    private String curFuncType;
+    private int forStmtCount; //判断当前是否在解析for语句中
+    private int formatCount;
+    private ArrayList<SyntaxNode> paraList; //判断实参类型与个数
     
     public Parser(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
@@ -27,6 +33,14 @@ public class Parser {
         this.pos = -1;
         this.infos = new ArrayList<>();
         this.root = new SyntaxNode("compUnit");
+        this.symbolTables = new HashMap<>();
+        this.stack = new Stack<>();
+        this.level = 0;
+        this.curFuncType = null;
+        this.forStmtCount = 0;
+        this.formatCount = 0;
+        this.paraList = new ArrayList<>();
+        initializeSymbolTable();
     }
     
     public void parseCompUnit() { //CompUnit → {Decl} {FuncDef} MainFuncDef
@@ -66,9 +80,9 @@ public class Parser {
         root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
         if (!isError) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework4\\src\\parser.txt"))) {
-                for (String info : infos) {
-                    stdout.write(info + "\n");
+            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework4\\src\\symbol.txt"))) {
+                for (int i = 1; i <= level; i++) {
+                    symbolTables.get(i).printSymbol(stdout);
                 }
             } catch (Exception ignored) {
             
@@ -87,22 +101,22 @@ public class Parser {
     
     public SyntaxNode parseDecl() {
         SyntaxNode node = new SyntaxNode("Decl");
-        Token curToken = peekToken();
         addInfo(); //const | int | char
-        if (curToken.getTokenType() == TokenType.CONSTTK) {
+        if (peekToken().getTokenType() == TokenType.CONSTTK) {
             SyntaxNode child = new SyntaxNode("ConstDecl");
             node.addChild(child);
             child.addChild(new SyntaxNode("const"));
             getNextToken();
             addInfo(); // int | char
             child.addChild(new SyntaxNode(peekToken().getToken())); // int | char
+            String type = peekToken().getToken();
             getNextToken(); //指向下一个
-            child.addChild(parseConstDef());
+            child.addChild(parseConstDef(type));
             while (peekToken().getTokenType() == TokenType.COMMA) {
                 addInfo();
                 child.addChild(new SyntaxNode(","));
                 getNextToken();
-                child.addChild(parseConstDef());
+                child.addChild(parseConstDef(type));
             }
             if (peekToken().getTokenType() == TokenType.SEMICN) { //遇到;结束
                 addInfo();
@@ -117,13 +131,14 @@ public class Parser {
             SyntaxNode child = new SyntaxNode("VarDecl");
             node.addChild(child);
             child.addChild(new SyntaxNode(peekToken().getToken())); //int | char
+            String type = peekToken().getToken();
             getNextToken(); // varDef
-            child.addChild(parseVarDef());
+            child.addChild(parseVarDef(type));
             while (peekToken().getTokenType() == TokenType.COMMA) {
                 addInfo();
                 child.addChild(new SyntaxNode(","));
                 getNextToken();
-                child.addChild(parseVarDef());
+                child.addChild(parseVarDef(type));
             }
             if (peekToken().getTokenType() == TokenType.SEMICN) {
                 addInfo();
@@ -137,12 +152,21 @@ public class Parser {
         }
     }
     
-    public SyntaxNode parseConstDef() {
+    public SyntaxNode parseConstDef(String type) {
         SyntaxNode node = new SyntaxNode("ConstDef");
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo(); //标识符
+        String name = peekToken().getToken();
+        Symbol symbol = new Symbol(name, "const", type, getStackLevel(stack.peek()));
+        if (isRedefined(name)) {
+            dealError(peekToken().getLineNum(), "b");
+        } else {
+            stack.peek().addSymbol(symbol);
+        }
         getNextToken();
+        /*TODO:变量值的赋值处理，暂时还没做，现在只做符号表的录入*/
         if (peekToken().getTokenType() == TokenType.LBRACK) {
+            symbol.setIsArray(true); //是数组
             addInfo();
             node.addChild(new SyntaxNode("["));
             getNextToken();
@@ -163,12 +187,21 @@ public class Parser {
         return node;
     }
     
-    public SyntaxNode parseVarDef() {
+    public SyntaxNode parseVarDef(String type) {
         SyntaxNode node = new SyntaxNode("VarDef");
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo(); //ident
+        String name = peekToken().getToken();
+        Symbol symbol = new Symbol(name, "var", type, getStackLevel(stack.peek()));
+        if (isRedefined(name)) {
+            dealError(peekToken().getLineNum(), "b");
+        } else {
+            stack.peek().addSymbol(symbol);
+        }
         getNextToken();
+        /*TODO:变量值的赋值处理，暂时还没做，现在只做符号表的录入*/
         if (peekToken().getTokenType() == TokenType.LBRACK) {
+            symbol.setIsArray(true); //是数组
             node.addChild(new SyntaxNode("["));
             addInfo();
             getNextToken();
@@ -253,22 +286,37 @@ public class Parser {
         SyntaxNode node = new SyntaxNode("FuncDef");
         SyntaxNode child = new SyntaxNode("FuncType");
         node.addChild(child); //funcdef-functype
-        child.addChild(new SyntaxNode(peekToken().getToken())); //functype-int|char
+        child.addChild(new SyntaxNode(peekToken().getToken())); //functype-void|int|char
         addInfo();
+        String type = peekToken().getToken();
         infos.add("<FuncType>");
         getNextToken(); //ident
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
+        String name = peekToken().getToken();
+        Symbol symbol = new Symbol(name, "func", type, getStackLevel(stack.peek()));
+        curFuncType = type;
+        if (isRedefined(name)) {
+            dealError(peekToken().getLineNum(), "b");
+        } else {
+            stack.peek().addSymbol(symbol);
+        }
         getNextToken(); //(
         node.addChild(new SyntaxNode("("));
         addInfo();
         getNextToken();
-        if (peekToken().getTokenType() == TokenType.RPARENT) {
+        //createSymbolTable();
+        //addLevel(); //准备进入另一个作用域，level++，创建新的symbolTable
+        SymbolTable symbolTable = new SymbolTable();
+        stack.push(symbolTable);
+        symbolTables.put(level + 1, symbolTable);
+        symbol.setSymbolTable(symbolTable); //将这个符号表设置为该function symbol的symbolTable用来快速计算function的para
+        if (peekToken().getTokenType() == TokenType.RPARENT) { //无参情况
             addInfo();
             node.addChild(new SyntaxNode(")"));
             getNextToken();
-            node.addChild(parseBlock());
-        } else {
+            node.addChild(parseBlock(true));
+        } else { //有参情况
             if (peekToken().getTokenType() == TokenType.INTTK || peekToken().getTokenType() == TokenType.CHARTK) { //FuncFParams
                 node.addChild(parseFuncFParams());
                 if (peekToken().getTokenType() == TokenType.RPARENT) {
@@ -279,8 +327,9 @@ public class Parser {
                     dealError(peekToken().getLineNum(), "j");
                 }
             }
-            node.addChild(parseBlock());
+            node.addChild(parseBlock(true));
         }
+        curFuncType = null; //该函数已经分析完毕
         infos.add("<FuncDef>");
         return node;
     }
@@ -296,6 +345,11 @@ public class Parser {
         node.addChild(new SyntaxNode("("));
         addInfo();
         getNextToken();
+        curFuncType = "int"; // main 是保留的关键字，不纳入符号表中，但是考虑g类错误，就需要设置funcType供block检查用
+        //createSymbolTable(); //main作用域的符号表
+        SymbolTable symbolTable = new SymbolTable();
+        stack.push(symbolTable);
+        symbolTables.put(level + 1, symbolTable);
         if (peekToken().getTokenType() == TokenType.RPARENT) {
             node.addChild(new SyntaxNode(")"));
             addInfo();
@@ -303,20 +357,32 @@ public class Parser {
         } else {
             dealError(peekToken().getLineNum(), "j");
         }
-        node.addChild(parseBlock());
+        node.addChild(parseBlock(true));
+        curFuncType = null; //main函数解析完毕
         infos.add("<MainFuncDef>");
         return node;
     }
     
-    public SyntaxNode parseBlock() {
+    public SyntaxNode parseBlock(boolean isFuncDef) {
         SyntaxNode node = new SyntaxNode("Block");
         node.addChild(new SyntaxNode("{"));
         addInfo(); //{
         getNextToken();
+        addLevel();
+        if (!isFuncDef) { //函数内部的{BlockItem}块，创建一个表，负责只需要level++即可
+            SymbolTable symbolTable = new SymbolTable();
+            stack.push(symbolTable);
+            symbolTables.put(level, symbolTable);
+        }
         while (peekToken().getTokenType() != TokenType.RBRACE) {
             node.addChild(parseBlockItem());
         }
+        boolean hasReturn = checkHasReturn(node);
+        if (isFuncDef && !hasReturn && (curFuncType.equals("int") || curFuncType.equals("char"))) { //函数没有return语句
+            dealError(peekToken().getLineNum(), "g");
+        }
         node.addChild(new SyntaxNode("}"));
+        stack.pop(); //弹出当前作用域的符号表，保持没分析完的作用域在stack里
         addInfo();
         getNextToken();
         infos.add("<Block>");
@@ -350,11 +416,20 @@ public class Parser {
         SyntaxNode node = new SyntaxNode("FuncFParam");
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
+        String type = peekToken().getToken();
         getNextToken(); //ident
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
+        String name = peekToken().getToken();
+        Symbol symbol = new Symbol(name, "para", type, getStackLevel(stack.peek()));
+        if (isRedefined(name)) {
+            dealError(peekToken().getLineNum(), "b");
+        } else {
+            stack.peek().addSymbol(symbol);
+        }
         getNextToken(); //[或者nothing
         if (peekToken().getTokenType() == TokenType.LBRACK) {
+            symbol.setIsArray(true);
             node.addChild(new SyntaxNode("["));
             addInfo();
             getNextToken();
@@ -418,20 +493,51 @@ public class Parser {
         } else if (peekToken().getTokenType() == TokenType.IDENFR) { //ident ([FuncParams])
             node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
+            String name = peekToken().getToken(); //标识符名称
+            int lineNum = peekToken().getLineNum();
+            if (isUndefined(name)) {
+                dealError(peekToken().getLineNum(), "c");
+            }
             getNextToken(); //判断是否是(
-            if (peekToken().getTokenType() == TokenType.LPARENT) {
+            if (peekToken().getTokenType() == TokenType.LPARENT) { //明确是调用function了
                 node.addChild(new SyntaxNode("("));
                 addInfo();
                 getNextToken();
-                if (peekToken().getTokenType() == TokenType.RPARENT) {
+                if (peekToken().getTokenType() == TokenType.RPARENT) { //无参情况
                     node.addChild(new SyntaxNode(")"));
                     addInfo();
                     getNextToken();
-                } else {
+                } else { //有参情况
                     if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                             || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                             || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
+                        paraList.clear();
                         node.addChild(parseFuncRParams()); //实参的第一个字符可能的情况
+                        Symbol symbol = getSymbol(name); //获取函数的符号，去找形参的个数
+                        SymbolTable symbolTable = symbol.getSymbolTable();
+                        if (paraList.size() != symbolTable.getParaCount()) { //实参个数与形参个数不相等
+                            dealError(lineNum, "d");
+                        }
+                        for (int i = 0; i < paraList.size(); i++) {
+                            String paraType;
+                            boolean isArray;
+                            if (isNumberPara(paraList.get(i).toString().charAt(0))) {
+                                paraType = "int";
+                                isArray = false;
+                            } else if (isCharPara(paraList.get(i).toString().charAt(0))) {
+                                paraType = "char";
+                                isArray = false;
+                            } else {
+                                Symbol paraSymbol = getSymbol(paraList.get(i).toString());
+                                paraType = paraSymbol.getType();
+                                isArray = paraSymbol.getIsArray();
+                            }
+                            if (!(paraType.equals(symbolTable.getSymbol(i).getType())
+                                    && (isArray == symbolTable.getSymbol(i).getIsArray()))) { //参数类型不匹配
+                                dealError(lineNum, "e");
+                                break; //只报一处错误
+                            }
+                        }
                     }
                     if (peekToken().getTokenType() == TokenType.RPARENT) { // )
                         node.addChild(new SyntaxNode(")"));
@@ -493,6 +599,10 @@ public class Parser {
         SyntaxNode node = new SyntaxNode("LVal");
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo(); //ident
+        String name = peekToken().getToken();
+        if (isUndefined(name)) {
+            dealError(peekToken().getLineNum(), "c");
+        }
         getNextToken();
         if (peekToken().getTokenType() == TokenType.LBRACK) {
             node.addChild(new SyntaxNode("["));
@@ -511,14 +621,18 @@ public class Parser {
         return node;
     }
     
-    public SyntaxNode parseFuncRParams() { //Exp{,Exp}
+    public SyntaxNode parseFuncRParams() { //Exp{,Exp}  FuncRParams->
         SyntaxNode node = new SyntaxNode("FuncRParams");
-        node.addChild(parseExp());
+        SyntaxNode child = parseExp();
+        node.addChild(child);
+        paraList.add(child);
         while (peekToken().getTokenType() == TokenType.COMMA) {
             node.addChild(new SyntaxNode(","));
             addInfo();
             getNextToken();
-            node.addChild(parseExp());
+            child = parseExp();
+            node.addChild(child);
+            paraList.add(child);
         }
         infos.add("<FuncRParams>");
         return node;
@@ -597,6 +711,10 @@ public class Parser {
     
     public SyntaxNode parseForStmt() {
         SyntaxNode node = new SyntaxNode("ForStmt");
+        String name = peekToken().getToken();
+        if (isConst(name)) {
+            dealError(peekToken().getLineNum(), "h");
+        }
         node.addChild(parseLVal());
         node.addChild(new SyntaxNode("="));
         addInfo();// =
@@ -630,21 +748,28 @@ public class Parser {
         }
     }
     
-    public void parsePrintf(SyntaxNode node) {
+    public void parsePrintf(SyntaxNode node) { // node.name = stmt
         node.addChild(new SyntaxNode("printf"));
         addInfo();
+        int lineNum = peekToken().getLineNum(); //printf所在行号
         getNextToken(); // (
         node.addChild(new SyntaxNode("("));
         addInfo();
-        getNextToken(); //StringConst
-        /*TODO:不知道怎么写，待完成*/
+        getNextToken(); //StringConst "%d%c"
+        /*TODO:不知道怎么写StringConst的语法树，待完成(有必要吗？)*/
+        setFormatCount(peekToken().getToken()); //将string拿进去分析，看看里面有几个格式符，存进了formatCount里面
         addInfo();
         getNextToken();
+        int count = 0; //计数有几个匹配的格式符
         while (peekToken().getTokenType() == TokenType.COMMA) {
+            count++;
             node.addChild(new SyntaxNode(","));
             addInfo();
             getNextToken();
             node.addChild(parseExp());
+        }
+        if (formatCount != count) { //printf中格式符与表达式个数不匹配
+            dealError(lineNum, "l");
         }
         if (peekToken().getTokenType() == TokenType.RPARENT) {
             node.addChild(new SyntaxNode(")"));
@@ -671,6 +796,9 @@ public class Parser {
     }
     
     public void parseBreakOrContinue(SyntaxNode node) {
+        if (forStmtCount == 0) { //没有for循环却用了break或者continue
+            dealError(peekToken().getLineNum(), "m");
+        }
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
         getNextToken();
@@ -684,6 +812,9 @@ public class Parser {
     }
     
     public void parseReturn(SyntaxNode node) {
+        if (!(curFuncType.equals("int") || curFuncType.equals("char"))) { //不能return的情况
+            dealError(peekToken().getLineNum(), "f");
+        }
         node.addChild(new SyntaxNode("return"));
         addInfo(); //return
         getNextToken();
@@ -701,8 +832,9 @@ public class Parser {
         }
     }
     
-    public void parseFor(SyntaxNode node) {
-        node.addChild(new SyntaxNode("for"));
+    public void parseFor(SyntaxNode node) { //node.getName() = stmt stmt->for ( ... ) Block ----- Block -> { BlockItem } ----
+        forStmtCount++; //嵌套层数++
+        node.addChild(new SyntaxNode("for"));// BlockItem -> Stmt -> break|continue;
         addInfo();
         getNextToken(); // (
         node.addChild(new SyntaxNode("("));
@@ -727,6 +859,7 @@ public class Parser {
         addInfo(); // )
         getNextToken();
         node.addChild(parseStmt());
+        forStmtCount--;//结束一层嵌套
     }
     
     public SyntaxNode parseStmt() {
@@ -749,7 +882,7 @@ public class Parser {
                 parseFor(node);
                 break;
             case LBRACE:
-                node.addChild(parseBlock());
+                node.addChild(parseBlock(false));
                 break;
             case IDENFR:
                 int lastPos = pos; //标识符的位置
@@ -796,6 +929,10 @@ public class Parser {
     }
     
     public void LVal2Exp(SyntaxNode node) { //处理getint|getchar
+        String name = peekToken().getToken();
+        if (isConst(name)) { //常量不可被修改值
+            dealError(peekToken().getLineNum(), "h");
+        }
         node.addChild(parseLVal());
         node.addChild(new SyntaxNode("="));
         addInfo(); // =
@@ -866,22 +1003,100 @@ public class Parser {
         return Math.min(getLastToken().getLineNum(), peekToken().getLineNum());
     }
     
-    public void printTree() {
-        Queue<SyntaxNode> queue = new LinkedList<>();
-        queue.add(root);
-        Queue<SyntaxNode> temp = new LinkedList<>();
-        while (!queue.isEmpty()) {
-            int size = queue.size();
-            for (int i = 0; i < size; i++) {
-                SyntaxNode node = queue.poll();
-                System.out.print(node.getName()+" ");
-                for (SyntaxNode child : node.getChildren()) {
-                    temp.add(child);
+    public void addLevel() {
+        level++;
+    }
+    
+    public boolean isType(TokenType tokenType) {
+        return peekToken().getTokenType() == tokenType;
+    }
+    
+    public boolean isRedefined(String name) {
+        return stack.peek().hasSymbol(name);
+    }
+    
+    public boolean isUndefined(String name) {
+        int size = stack.size() - 1;
+        for (int i = size; i >= 0; i--) {
+            SymbolTable symbolTable = stack.get(i);
+            if (symbolTable.hasSymbol(name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    public void initializeSymbolTable() {
+        //addLevel(); //准备进入另一个作用域，level++，创建新的symbolTable
+        SymbolTable symbolTable = new SymbolTable();
+        stack.push(symbolTable);
+        symbolTables.put(++level, symbolTable);
+    }
+    
+    public boolean checkHasReturn(SyntaxNode node) {
+        if (curFuncType.equals("int") || curFuncType.equals("char")) { //g类错误只考虑}前面一行是否是return即可
+            if (node.getLastChild() != null && node.getLastChild().getName().equals("BlockItem")) {
+                SyntaxNode blockItemNode = node.getLastChild();
+                if (blockItemNode.getLastChild() != null && blockItemNode.getLastChild().getName().equals("Stmt")) {
+                    SyntaxNode stmtNode = blockItemNode.getLastChild();
+                    if (stmtNode != null && stmtNode.getChildren().get(0).getName().equals("return")
+                            && stmtNode.getChildren().get(1) != null && stmtNode.getChildren().get(1).getName().equals("Exp")) {
+                        return true;
+                    }
                 }
             }
-            queue.addAll(temp);
-            temp.clear();
-            System.out.println();
         }
+        return false;
+    }
+    
+    public boolean isConst(String name) {
+        int size = stack.size() - 1;
+        for (int i = size; i >= 0; i--) {
+            SymbolTable symbolTable = stack.get(i); //从内层向外层看，找作用域最小的且在stack中的那一个
+            if (symbolTable.hasSymbol(name) && symbolTable.getSymbol(name).isConst()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public void setFormatCount(String string) {
+        formatCount = 0;
+        for (int i = 0; i < string.length(); i++) {
+            if (string.charAt(i) == '%') {
+                if ((i + 1 < string.length()) && (string.charAt(i + 1) == 'd' || string.charAt(i + 1) == 'c')) {
+                    formatCount++; //格式符的数量++
+                    i++; //跳过d或者c，防止重复分析
+                }
+            }
+        }
+    }
+    
+    public Symbol getSymbol(String name) {
+        int size = stack.size() - 1;
+        for (int i = size; i >= 0; i--) {
+            SymbolTable symbolTable = stack.get(i);
+            if (symbolTable.hasSymbol(name)) {
+                return symbolTable.getSymbol(name);
+            }
+        }
+        return null;
+    }
+    
+    public boolean isNumberPara(char ch) {
+        return ch >= '0' && ch <= '9';
+    }
+    
+    public boolean isCharPara(char ch) {
+        return ch == '\'';
+    }
+    
+    public int getStackLevel(SymbolTable symbolTable) {
+        for (int i = 1; i <= symbolTables.size(); i++) { //level有可能还未更新，以tables.size作为衡量level的标准，因为11对应
+            if (symbolTables.get(i) != null && symbolTables.get(i).equals(symbolTable)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
