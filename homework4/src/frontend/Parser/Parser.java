@@ -24,7 +24,6 @@ public class Parser {
     private String curFuncType;
     private int forStmtCount; //判断当前是否在解析for语句中
     private int formatCount;
-    private ArrayList<SyntaxNode> paraList; //判断实参类型与个数
     
     public Parser(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
@@ -39,7 +38,6 @@ public class Parser {
         this.curFuncType = null;
         this.forStmtCount = 0;
         this.formatCount = 0;
-        this.paraList = new ArrayList<>();
         initializeSymbolTable();
     }
     
@@ -511,8 +509,8 @@ public class Parser {
                     if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                             || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                             || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
-                        paraList.clear();
-                        node.addChild(parseFuncRParams()); //实参的第一个字符可能的情况
+                        ArrayList<SyntaxNode> paraList = new ArrayList<>(); //判断实参类型与个数
+                        node.addChild(parseFuncRParams(paraList)); //实参的第一个字符可能的情况
                         Symbol symbol = getSymbol(name); //获取函数的符号，去找形参的个数
                         SymbolTable symbolTable = symbol.getSymbolTable();
                         if (paraList.size() != symbolTable.getParaCount()) { //实参个数与形参个数不相等
@@ -521,13 +519,23 @@ public class Parser {
                         for (int i = 0; i < paraList.size(); i++) {
                             String paraType;
                             boolean isArray;
-                            if (isNumberPara(paraList.get(i).toString().charAt(0))) {
+                            if (isNumberPara(paraList.get(i).toString().charAt(0))) { //常量number
                                 paraType = "int";
                                 isArray = false;
-                            } else if (isCharPara(paraList.get(i).toString().charAt(0))) {
+                            } else if (isCharPara(paraList.get(i).toString().charAt(0))) { //常量字符
                                 paraType = "char";
                                 isArray = false;
-                            } else {
+                            } else if (paraList.get(i).toString().contains("[")) { //数组的其中一个元素
+                                Symbol paraSymbol = getSymbol(paraList.get(i).toString());
+                                paraType = paraSymbol.getType();
+                                isArray = false; //取的数组中的一个
+                            } else if (paraList.get(i).toString().contains("(")) { //调用的是函数，作为参数的类型应该与函数返回的类型一样
+                                int index = paraList.get(i).toString().indexOf("(");
+                                String paraName = paraList.get(i).toString().substring(0, index);
+                                Symbol paraSymbol = getSymbol(paraName);
+                                paraType = paraSymbol.getType();
+                                isArray = false;
+                            } else { //是其他直接变量
                                 Symbol paraSymbol = getSymbol(paraList.get(i).toString());
                                 paraType = paraSymbol.getType();
                                 isArray = paraSymbol.getIsArray();
@@ -621,7 +629,7 @@ public class Parser {
         return node;
     }
     
-    public SyntaxNode parseFuncRParams() { //Exp{,Exp}  FuncRParams->
+    public SyntaxNode parseFuncRParams(ArrayList<SyntaxNode> paraList) { //Exp{,Exp}  FuncRParams->
         SyntaxNode node = new SyntaxNode("FuncRParams");
         SyntaxNode child = parseExp();
         node.addChild(child);
@@ -1077,6 +1085,10 @@ public class Parser {
         int size = stack.size() - 1;
         for (int i = size; i >= 0; i--) {
             SymbolTable symbolTable = stack.get(i);
+            if (name.contains("[")) { //是数组的一个选项
+                int index = name.indexOf("[");
+                name = name.substring(0, index);
+            }
             if (symbolTable.hasSymbol(name)) {
                 return symbolTable.getSymbol(name);
             }
