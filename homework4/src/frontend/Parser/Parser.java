@@ -812,15 +812,16 @@ public class Parser {
     }
     
     public void parseReturn(SyntaxNode node) {
-        if (!(curFuncType.equals("int") || curFuncType.equals("char"))) { //不能return的情况
-            dealError(peekToken().getLineNum(), "f");
-        }
+        int lineNum = peekToken().getLineNum();
         node.addChild(new SyntaxNode("return"));
         addInfo(); //return
         getNextToken();
         if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                 || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                 || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
+            if (!(curFuncType.equals("int") || curFuncType.equals("char"))) { //不能return [exp]的情况
+                dealError(lineNum, "f");
+            }
             node.addChild(parseExp());
         }
         if (peekToken().getTokenType() == TokenType.SEMICN) {
