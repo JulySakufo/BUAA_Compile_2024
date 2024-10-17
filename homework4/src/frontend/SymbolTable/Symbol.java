@@ -1,5 +1,7 @@
 package frontend.SymbolTable;
 
+import java.util.ArrayList;
+
 public class Symbol {
     private String name;
     private String kind;
@@ -7,6 +9,7 @@ public class Symbol {
     private int level;
     private boolean isArray;
     private SymbolTable symbolTable; //当该symbol是func时，可以拥有自己的symbolTable，方便选取参数
+    private ArrayList<Integer> parasType; //当kind是func时，此内容存放形参para的类型
     
     public Symbol(String name, String kind, String type, int level) {
         this.name = name;
@@ -14,6 +17,7 @@ public class Symbol {
         this.type = type;
         this.level = level;
         this.isArray = false;
+        this.parasType = new ArrayList<>();
     }
     
     public String getName() {
@@ -38,6 +42,14 @@ public class Symbol {
     
     public SymbolTable getSymbolTable() {
         return symbolTable;
+    }
+    
+    public ArrayList<Integer> getParasType() {
+        return parasType;
+    }
+    
+    public void setParasType(ArrayList<Integer> parasType) {
+        this.parasType = parasType;
     }
     
     public boolean isConst() {

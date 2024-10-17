@@ -25,6 +25,8 @@ public class Parser {
     private int forStmtCount; //判断当前是否在解析for语句中
     private int formatCount;
     
+    private int curParaType; //记录当前分析的实参类型,0代表值，1代表int型数组，2代表char型数组
+    
     public Parser(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
         this.errorList = errorList;
@@ -38,6 +40,7 @@ public class Parser {
         this.curFuncType = null;
         this.forStmtCount = 0;
         this.formatCount = 0;
+        this.curParaType = 0;
         initializeSymbolTable();
     }
     
@@ -316,7 +319,9 @@ public class Parser {
             node.addChild(parseBlock(true));
         } else { //有参情况
             if (peekToken().getTokenType() == TokenType.INTTK || peekToken().getTokenType() == TokenType.CHARTK) { //FuncFParams
-                node.addChild(parseFuncFParams());
+                ArrayList<Integer> parasType = new ArrayList<>();
+                node.addChild(parseFuncFParams(parasType));
+                symbol.setParasType(parasType); //完善kind为func类型的symbol
                 if (peekToken().getTokenType() == TokenType.RPARENT) {
                     node.addChild(new SyntaxNode(")"));
                     addInfo();
@@ -397,20 +402,20 @@ public class Parser {
         return node;
     }
     
-    public SyntaxNode parseFuncFParams() { // FuncFParam{,FuncFParam}
+    public SyntaxNode parseFuncFParams(ArrayList<Integer> parasType) { // FuncFParam{,FuncFParam}
         SyntaxNode node = new SyntaxNode("FuncFParams");
-        node.addChild(parseFuncFParam());
+        node.addChild(parseFuncFParam(parasType));
         while (peekToken().getTokenType() == TokenType.COMMA) {
             node.addChild(new SyntaxNode(","));
             addInfo();
             getNextToken();
-            node.addChild(parseFuncFParam());
+            node.addChild(parseFuncFParam(parasType));
         }
         infos.add("<FuncFParams>");
         return node;
     }
     
-    public SyntaxNode parseFuncFParam() {
+    public SyntaxNode parseFuncFParam(ArrayList<Integer> parasType) {
         SyntaxNode node = new SyntaxNode("FuncFParam");
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
@@ -440,6 +445,15 @@ public class Parser {
             }
         } //始终指向下一个未分析的token
         infos.add("<FuncFParam>");
+        if (!symbol.getIsArray()) { //加入形参类型
+            parasType.add(0);
+        } else {
+            if (type.equals("int")) {
+                parasType.add(1);
+            } else if (type.equals("char")) {
+                parasType.add(2);
+            }
+        }
         return node;
     }
     
@@ -460,6 +474,7 @@ public class Parser {
             getNextToken();
             node.addChild(parseMulExp());
             infos.add("<AddExp>");
+            curParaType = 0; //0代表值(变量)的意思
         }
         return node;
     }
@@ -474,6 +489,7 @@ public class Parser {
             getNextToken();
             node.addChild(parseUnaryExp());
             infos.add("<MulExp>");
+            curParaType = 0; //包是int型数值
         }
         return node;
     }
@@ -488,10 +504,21 @@ public class Parser {
             infos.add("<UnaryOp>");
             getNextToken();
             node.addChild(parseUnaryExp());
-        } else if (peekToken().getTokenType() == TokenType.IDENFR) { //ident ([FuncParams])
+            curParaType = 0; //带+-号的一定是数值
+        } else if (peekToken().getTokenType() == TokenType.IDENFR) { //ident ([FuncParams]) 函数调用
             node.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             String name = peekToken().getToken(); //标识符名称
+            Symbol symbol = getSymbol(name);
+            if (symbol.getIsArray()) {
+                if (symbol.getType().equals("int")) {
+                    curParaType = 1;
+                } else if (symbol.getType().equals("char")) {
+                    curParaType = 2;
+                }
+            } else {
+                curParaType = 0;
+            }
             int lineNum = peekToken().getLineNum();
             if (isUndefined(name)) {
                 dealError(peekToken().getLineNum(), "c");
@@ -509,47 +536,15 @@ public class Parser {
                     if (peekToken().getTokenType() == TokenType.INTCON || peekToken().getTokenType() == TokenType.CHRCON
                             || peekToken().getTokenType() == TokenType.IDENFR || peekToken().getTokenType() == TokenType.LPARENT
                             || peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU || peekToken().getTokenType() == TokenType.NOT) {
-                        ArrayList<SyntaxNode> paraList = new ArrayList<>(); //判断实参类型与个数
+                        ArrayList<Integer> paraList = new ArrayList<>(); //判断实参类型与个数，里面记录实参的类型
                         node.addChild(parseFuncRParams(paraList)); //实参的第一个字符可能的情况
-                        Symbol symbol = getSymbol(name); //获取函数的符号，去找形参的个数
-                        SymbolTable symbolTable = symbol.getSymbolTable();
-                        if (paraList.size() != symbolTable.getParaCount()) { //实参个数与形参个数不相等
+                        if (paraList.size() != symbol.getParasType().size()) { //实参个数与形参个数不相等
                             dealError(lineNum, "d");
                         }
-                        /*TODO:e类错误如何处理？*/
                         for (int i = 0; i < paraList.size(); i++) {
-                            String paraType;
-                            boolean isArray;
-                            if (isNumberPara(paraList.get(i).toString().charAt(0))) { //常量number
-                                paraType = "int";
-                                isArray = false;
-                            } else if (isCharPara(paraList.get(i).toString().charAt(0))) { //常量字符
-                                paraType = "char";
-                                isArray = false;
-                            } else if (paraList.get(i).toString().contains("[")) { //数组的其中一个元素
-                                Symbol paraSymbol = getSymbol(paraList.get(i).toString());
-                                paraType = paraSymbol.getType();
-                                isArray = false; //取的数组中的一个
-                            } else if (paraList.get(i).toString().contains("(")) { //调用的是函数，作为参数的类型应该与函数返回的类型一样
-                                int index = paraList.get(i).toString().indexOf("(");
-                                String paraName = paraList.get(i).toString().substring(0, index);
-                                Symbol paraSymbol = getSymbol(paraName);
-                                paraType = paraSymbol.getType();
-                                isArray = false;
-                            } else if (paraList.get(i).toString().contains("+") || paraList.get(i).toString().contains("-")
-                                    || paraList.get(i).toString().contains("*") || paraList.get(i).toString().contains("/")
-                                    || paraList.get(i).toString().contains("!")) { //是表达式，统一认为是int型(文法规则所说)
-                                paraType = "int";
-                                isArray = false;
-                            } else { //是其他直接变量
-                                Symbol paraSymbol = getSymbol(paraList.get(i).toString());
-                                paraType = paraSymbol.getType();
-                                isArray = paraSymbol.getIsArray();
-                            }
-                            if (!(paraType.equals(symbolTable.getSymbol(i).getType())
-                                    && (isArray == symbolTable.getSymbol(i).getIsArray()))) { //参数类型不匹配
-                                dealError(lineNum, "e");
-                                break; //只报一处错误
+                            if (!paraList.get(i).equals(symbol.getParasType().get(i))) {
+                                dealError(lineNum, "e"); //只记录一次e类错误
+                                break;
                             }
                         }
                     }
@@ -588,6 +583,7 @@ public class Parser {
             } else {
                 dealError(peekToken().getLineNum(), "j");
             }
+            curParaType = 0; //数组不参与运算，即不会带括号
         } else if (peekToken().getTokenType() == TokenType.INTCON) {
             SyntaxNode child = new SyntaxNode("Number");
             node.addChild(child);
@@ -595,6 +591,7 @@ public class Parser {
             addInfo();
             getNextToken();
             infos.add("<Number>");
+            curParaType = 0;
         } else if (peekToken().getTokenType() == TokenType.CHRCON) {
             SyntaxNode child = new SyntaxNode("Character");
             node.addChild(child);
@@ -602,6 +599,7 @@ public class Parser {
             addInfo();
             getNextToken();
             infos.add("<Character>");
+            curParaType = 0;
         } else { // LVal
             node.addChild(parseLVal());
         }
@@ -614,6 +612,16 @@ public class Parser {
         node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo(); //ident
         String name = peekToken().getToken();
+        Symbol symbol = getSymbol(name);
+        if (getSymbol(name).getIsArray()) { //是数组
+            if (symbol.getType().equals("int")) {
+                curParaType = 1;
+            } else if (symbol.getType().equals("char")) {
+                curParaType = 2;
+            }
+        } else { //不是数组
+            curParaType = 0;
+        }
         if (isUndefined(name)) {
             dealError(peekToken().getLineNum(), "c");
         }
@@ -630,23 +638,22 @@ public class Parser {
             } else {
                 dealError(peekToken().getLineNum(), "k");
             }
+            curParaType = 0; //带[]一定是对数组的引用，值
         }
         infos.add("<LVal>");
         return node;
     }
     
-    public SyntaxNode parseFuncRParams(ArrayList<SyntaxNode> paraList) { //Exp{,Exp}  FuncRParams->
+    public SyntaxNode parseFuncRParams(ArrayList<Integer> paraList) { //Exp{,Exp}  FuncRParams->
         SyntaxNode node = new SyntaxNode("FuncRParams");
-        SyntaxNode child = parseExp();
-        node.addChild(child);
-        paraList.add(child);
+        node.addChild(parseExp());
+        paraList.add(curParaType); //分析一个实参，记录一次实参类型
         while (peekToken().getTokenType() == TokenType.COMMA) {
             node.addChild(new SyntaxNode(","));
             addInfo();
             getNextToken();
-            child = parseExp();
-            node.addChild(child);
-            paraList.add(child);
+            node.addChild(parseExp());
+            paraList.add(curParaType);
         }
         infos.add("<FuncRParams>");
         return node;
