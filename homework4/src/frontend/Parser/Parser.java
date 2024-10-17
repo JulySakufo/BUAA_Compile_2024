@@ -923,10 +923,8 @@ public class Parser {
                     for (int i = oldInfoSize; i < newSize; i++) {
                         infos.remove(infos.size() - 1);
                     } //删除在parseExp中加的info，每次移除掉最尾部的即可
-                    if (peekToken().getTokenType() == TokenType.RBRACK) {
+                    if (peekToken().getTokenType() == TokenType.RBRACK) { //k类错误待会儿自会有人解析，现在是推进判断工作
                         getNextToken(); //看是=还是其他
-                    } else {
-                        dealError(peekToken().getLineNum(), "k");
                     }
                     if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp a[Exp] = exp
                         pos = lastPos;
