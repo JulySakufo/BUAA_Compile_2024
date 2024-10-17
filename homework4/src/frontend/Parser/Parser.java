@@ -1078,8 +1078,8 @@ public class Parser {
         int size = stack.size() - 1;
         for (int i = size; i >= 0; i--) {
             SymbolTable symbolTable = stack.get(i); //从内层向外层看，找作用域最小的且在stack中的那一个
-            if (symbolTable.hasSymbol(name) && symbolTable.getSymbol(name).isConst()) {
-                return true;
+            if (symbolTable.hasSymbol(name)) {
+                return symbolTable.getSymbol(name).isConst();
             }
         }
         return false;
