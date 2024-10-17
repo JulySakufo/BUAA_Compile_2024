@@ -516,6 +516,7 @@ public class Parser {
                         if (paraList.size() != symbolTable.getParaCount()) { //实参个数与形参个数不相等
                             dealError(lineNum, "d");
                         }
+                        /*TODO:e类错误如何处理？*/
                         for (int i = 0; i < paraList.size(); i++) {
                             String paraType;
                             boolean isArray;
@@ -534,6 +535,11 @@ public class Parser {
                                 String paraName = paraList.get(i).toString().substring(0, index);
                                 Symbol paraSymbol = getSymbol(paraName);
                                 paraType = paraSymbol.getType();
+                                isArray = false;
+                            } else if (paraList.get(i).toString().contains("+") || paraList.get(i).toString().contains("-")
+                                    || paraList.get(i).toString().contains("*") || paraList.get(i).toString().contains("/")
+                                    || paraList.get(i).toString().contains("!")) { //是表达式，统一认为是int型(文法规则所说)
+                                paraType = "int";
                                 isArray = false;
                             } else { //是其他直接变量
                                 Symbol paraSymbol = getSymbol(paraList.get(i).toString());
