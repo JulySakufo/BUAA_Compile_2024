@@ -327,6 +327,8 @@ public class Parser {
                 } else {
                     dealError(peekToken().getLineNum(), "j");
                 }
+            } else { //不是funcFParams，说明缺少了右括号
+                dealError(getMinErrorLineNum(), "j");
             }
             node.addChild(parseBlock(true));
         }
