@@ -14,7 +14,6 @@ import java.util.*;
 public class Parser {
     private ArrayList<Token> tokenList;
     private ArrayList<MyError> errorList;
-    private boolean isError;
     private int pos;
     private ArrayList<String> infos;
     private SyntaxNode root; //语法树的根节点
@@ -30,7 +29,6 @@ public class Parser {
     public Parser(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
         this.errorList = errorList;
-        this.isError = false;
         this.pos = -1;
         this.infos = new ArrayList<>();
         this.root = new SyntaxNode("compUnit");
@@ -80,7 +78,7 @@ public class Parser {
         }
         root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
-        if (!isError) {
+        if (errorList.isEmpty()) { //有无错误直接看errorList里面有无内容就行了
             try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework4\\src\\symbol.txt"))) {
                 for (int i = 1; i <= level; i++) {
                     symbolTables.get(i).printSymbol(stdout);
@@ -1019,7 +1017,6 @@ public class Parser {
     }
     
     public void dealError(int lineNum, String type) { //考虑到词法分析会先生成错误信息，在最后的错误信息输出时应先按行号排序
-        isError = true;
         errorList.add(new MyError(lineNum, type));
     }
     
