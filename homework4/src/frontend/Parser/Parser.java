@@ -510,15 +510,6 @@ public class Parser {
             addInfo();
             String name = peekToken().getToken(); //标识符名称
             Symbol symbol = getSymbol(name);
-            if (symbol.getIsArray()) {
-                if (symbol.getType().equals("int")) {
-                    curParaType = 1;
-                } else if (symbol.getType().equals("char")) {
-                    curParaType = 2;
-                }
-            } else {
-                curParaType = 0;
-            }
             int lineNum = peekToken().getLineNum();
             if (isUndefined(name)) {
                 dealError(peekToken().getLineNum(), "c");
@@ -554,6 +545,15 @@ public class Parser {
                         getNextToken();
                     } else { //没有右括号
                         dealError(getMinErrorLineNum(), "j");
+                    }
+                    if (symbol.getIsArray()) {
+                        if (symbol.getType().equals("int")) {
+                            curParaType = 1;
+                        } else if (symbol.getType().equals("char")) {
+                            curParaType = 2;
+                        }
+                    } else {
+                        curParaType = 0;
                     }
                 }
             } else { //是primaryExp的ident
