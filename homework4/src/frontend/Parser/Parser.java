@@ -531,11 +531,12 @@ public class Parser {
                         node.addChild(parseFuncRParams(paraList)); //实参的第一个字符可能的情况
                         if (paraList.size() != symbol.getParasType().size()) { //实参个数与形参个数不相等
                             dealError(lineNum, "d");
-                        }
-                        for (int i = 0; i < paraList.size(); i++) {
-                            if (!paraList.get(i).equals(symbol.getParasType().get(i))) {
-                                dealError(lineNum, "e"); //只记录一次e类错误
-                                break;
+                        } else {
+                            for (int i = 0; i < paraList.size(); i++) {
+                                if (!paraList.get(i).equals(symbol.getParasType().get(i))) {
+                                    dealError(lineNum, "e"); //只记录一次e类错误
+                                    break;
+                                }
                             }
                         }
                     }
@@ -921,7 +922,11 @@ public class Parser {
                     for (int i = oldInfoSize; i < newSize; i++) {
                         infos.remove(infos.size() - 1);
                     } //删除在parseExp中加的info，每次移除掉最尾部的即可
-                    getNextToken(); //看是=还是其他
+                    if (peekToken().getTokenType() == TokenType.RBRACK) {
+                        getNextToken(); //看是=还是其他
+                    } else {
+                        dealError(peekToken().getLineNum(), "k");
+                    }
                     if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp a[Exp] = exp
                         pos = lastPos;
                         LVal2Exp(node);
