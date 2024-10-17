@@ -511,11 +511,11 @@ public class Parser {
             String name = peekToken().getToken(); //标识符名称
             Symbol symbol = getSymbol(name);
             int lineNum = peekToken().getLineNum();
-            if (isUndefined(name)) {
-                dealError(peekToken().getLineNum(), "c");
-            }
             getNextToken(); //判断是否是(
             if (peekToken().getTokenType() == TokenType.LPARENT) { //明确是调用function了
+                if (isUndefined(name)) { //函数单独处理，变量单独处理
+                    dealError(peekToken().getLineNum(), "c");
+                }
                 node.addChild(new SyntaxNode("("));
                 addInfo();
                 getNextToken();
@@ -614,17 +614,18 @@ public class Parser {
         addInfo(); //ident
         String name = peekToken().getToken();
         Symbol symbol = getSymbol(name);
-        if (getSymbol(name).getIsArray()) { //是数组
-            if (symbol.getType().equals("int")) {
-                curParaType = 1;
-            } else if (symbol.getType().equals("char")) {
-                curParaType = 2;
-            }
-        } else { //不是数组
-            curParaType = 0;
-        }
         if (isUndefined(name)) {
             dealError(peekToken().getLineNum(), "c");
+        } else {
+            if (getSymbol(name).getIsArray()) { //是数组
+                if (symbol.getType().equals("int")) {
+                    curParaType = 1;
+                } else if (symbol.getType().equals("char")) {
+                    curParaType = 2;
+                }
+            } else { //不是数组
+                curParaType = 0;
+            }
         }
         getNextToken();
         if (peekToken().getTokenType() == TokenType.LBRACK) {
