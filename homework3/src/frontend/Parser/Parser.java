@@ -15,7 +15,6 @@ import java.util.Queue;
 public class Parser {
     private ArrayList<Token> tokenList;
     private ArrayList<MyError> errorList;
-    private boolean isError;
     private int pos;
     private ArrayList<String> infos;
     private SyntaxNode root; //语法树的根节点
@@ -23,7 +22,6 @@ public class Parser {
     public Parser(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
         this.errorList = errorList;
-        this.isError = false;
         this.pos = -1;
         this.infos = new ArrayList<>();
         this.root = new SyntaxNode("compUnit");
@@ -65,7 +63,7 @@ public class Parser {
         }
         root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
-        if (!isError) {
+        if (errorList.isEmpty()) {
             try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\parser.txt"))) {
                 for (String info : infos) {
                     stdout.write(info + "\n");
@@ -279,6 +277,8 @@ public class Parser {
                 } else {
                     dealError(peekToken().getLineNum(), "j");
                 }
+            } else { //不是funcFParams，说明缺少了右括号
+                dealError(getMinErrorLineNum(), "j");
             }
             node.addChild(parseBlock());
         }
@@ -767,7 +767,9 @@ public class Parser {
                     for (int i = oldInfoSize; i < newSize; i++) {
                         infos.remove(infos.size() - 1);
                     } //删除在parseExp中加的info，每次移除掉最尾部的即可
-                    getNextToken(); //看是=还是其他
+                    if (peekToken().getTokenType() == TokenType.RBRACK) { //k类错误待会儿自会有人解析，现在是推进工作
+                        getNextToken(); //看是=还是其他
+                    }
                     if (peekToken().getTokenType() == TokenType.ASSIGN) { //是LVal = Exp a[Exp] = exp
                         pos = lastPos;
                         LVal2Exp(node);
@@ -855,7 +857,6 @@ public class Parser {
     }
     
     public void dealError(int lineNum, String type) { //考虑到词法分析会先生成错误信息，在最后的错误信息输出时应先按行号排序
-        isError = true;
         errorList.add(new MyError(lineNum, type));
     }
     
@@ -875,7 +876,7 @@ public class Parser {
             int size = queue.size();
             for (int i = 0; i < size; i++) {
                 SyntaxNode node = queue.poll();
-                System.out.print(node.getName()+" ");
+                System.out.print(node.getName() + " ");
                 for (SyntaxNode child : node.getChildren()) {
                     temp.add(child);
                 }
