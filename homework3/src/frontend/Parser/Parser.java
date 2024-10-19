@@ -620,7 +620,7 @@ public class Parser {
             addInfo();
             getNextToken(); //Stmt
         } else {
-            dealError(peekToken().getLineNum(), "j");
+            dealError(getMinErrorLineNum(), "j");
         }
         node.addChild(parseStmt());
         if (peekToken().getTokenType() == TokenType.ELSETK) {
