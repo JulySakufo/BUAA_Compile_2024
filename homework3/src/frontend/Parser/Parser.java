@@ -64,7 +64,7 @@ public class Parser {
         root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
         if (errorList.isEmpty()) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\parser.txt"))) {
+            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("parser.txt"))) {
                 for (String info : infos) {
                     stdout.write(info + "\n");
                 }
@@ -74,7 +74,7 @@ public class Parser {
             }
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
-            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt", true))) {
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("error.txt", true))) {
                 for (MyError error : errorList) {
                     stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
@@ -151,7 +151,7 @@ public class Parser {
                 node.addChild(new SyntaxNode("]"));
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
         }
         addInfo(); // =
@@ -177,7 +177,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
         }
         if (peekToken().getTokenType() == TokenType.ASSIGN) {
@@ -275,7 +275,7 @@ public class Parser {
                     addInfo();
                     getNextToken();
                 } else {
-                    dealError(peekToken().getLineNum(), "j");
+                    dealError(getMinErrorLineNum(), "j");
                 }
             } else { //不是funcFParams，说明缺少了右括号
                 dealError(getMinErrorLineNum(), "j");
@@ -302,7 +302,7 @@ public class Parser {
             addInfo();
             getNextToken(); //BLOCK
         } else {
-            dealError(peekToken().getLineNum(), "j");
+            dealError(getMinErrorLineNum(), "j");
         }
         node.addChild(parseBlock());
         infos.add("<MainFuncDef>");
@@ -364,7 +364,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
         } //始终指向下一个未分析的token
         infos.add("<FuncFParam>");
@@ -467,7 +467,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "j");
+                dealError(getMinErrorLineNum(), "j");
             }
         } else if (peekToken().getTokenType() == TokenType.INTCON) {
             SyntaxNode child = new SyntaxNode("Number");
@@ -505,7 +505,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
         }
         infos.add("<LVal>");
@@ -660,7 +660,7 @@ public class Parser {
             }
         } else { //缺少)
             if (peekToken().getTokenType() == TokenType.SEMICN) {
-                dealError(peekToken().getLineNum(), "j");
+                dealError(getMinErrorLineNum(), "j");
                 node.addChild(new SyntaxNode(";"));
                 addInfo();
                 getNextToken();
@@ -823,7 +823,7 @@ public class Parser {
                 }
             } else {
                 if (peekToken().getTokenType() == TokenType.SEMICN) {
-                    dealError(peekToken().getLineNum(), "j");
+                    dealError(getMinErrorLineNum(), "j");
                     node.addChild(new SyntaxNode(";"));
                     addInfo();
                     getNextToken();
