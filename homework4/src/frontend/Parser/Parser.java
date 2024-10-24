@@ -175,7 +175,7 @@ public class Parser {
                 node.addChild(new SyntaxNode("]"));
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
         }
         addInfo(); // =
@@ -210,7 +210,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
         }
         if (peekToken().getTokenType() == TokenType.ASSIGN) {
@@ -325,7 +325,7 @@ public class Parser {
                     addInfo();
                     getNextToken();
                 } else {
-                    dealError(peekToken().getLineNum(), "j");
+                    dealError(getMinErrorLineNum(), "j");
                 }
             } else { //不是funcFParams，说明缺少了右括号
                 dealError(getMinErrorLineNum(), "j");
@@ -358,7 +358,7 @@ public class Parser {
             addInfo();
             getNextToken(); //BLOCK
         } else {
-            dealError(peekToken().getLineNum(), "j");
+            dealError(getMinErrorLineNum(), "j");
         }
         node.addChild(parseBlock(true));
         curFuncType = null; //main函数解析完毕
@@ -441,7 +441,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
         } //始终指向下一个未分析的token
         infos.add("<FuncFParam>");
@@ -582,7 +582,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "j");
+                dealError(getMinErrorLineNum(), "j");
             }
             curParaType = 0; //数组不参与运算，即不会带括号
         } else if (peekToken().getTokenType() == TokenType.INTCON) {
@@ -638,7 +638,7 @@ public class Parser {
                 addInfo();
                 getNextToken();
             } else {
-                dealError(peekToken().getLineNum(), "k");
+                dealError(getMinErrorLineNum(), "k");
             }
             curParaType = 0; //带[]一定是对数组的引用，值
         }
@@ -807,7 +807,7 @@ public class Parser {
             }
         } else { //缺少)
             if (peekToken().getTokenType() == TokenType.SEMICN) {
-                dealError(peekToken().getLineNum(), "j");
+                dealError(getMinErrorLineNum(), "j");
                 node.addChild(new SyntaxNode(";"));
                 addInfo();
                 getNextToken();
@@ -983,7 +983,7 @@ public class Parser {
                 }
             } else {
                 if (peekToken().getTokenType() == TokenType.SEMICN) {
-                    dealError(peekToken().getLineNum(), "j");
+                    dealError(getMinErrorLineNum(), "j");
                     node.addChild(new SyntaxNode(";"));
                     addInfo();
                     getNextToken();
