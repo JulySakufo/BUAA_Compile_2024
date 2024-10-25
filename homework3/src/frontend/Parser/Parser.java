@@ -64,17 +64,16 @@ public class Parser {
         root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
         if (errorList.isEmpty()) {
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("parser.txt"))) {
+            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\parser.txt"))) {
                 for (String info : infos) {
                     stdout.write(info + "\n");
                 }
-                printTree();
             } catch (Exception ignored) {
             
             }
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
-            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("error.txt", true))) {
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework3\\src\\error.txt", true))) {
                 for (MyError error : errorList) {
                     stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
@@ -762,11 +761,16 @@ public class Parser {
                 } else if (peekToken().getTokenType() == TokenType.LBRACK) { //a[
                     getNextToken(); //exp
                     int oldInfoSize = infos.size() - 1;
+                    int oldErrorSize = errorList.size() - 1;
                     parseExp(); //出来应该指到的是]
-                    int newSize = infos.size() - 1;
-                    for (int i = oldInfoSize; i < newSize; i++) {
+                    int newInfoSize = infos.size() - 1;
+                    int newErrorSize = errorList.size() - 1;
+                    for (int i = oldInfoSize; i < newInfoSize; i++) {
                         infos.remove(infos.size() - 1);
                     } //删除在parseExp中加的info，每次移除掉最尾部的即可
+                    for (int i = oldErrorSize; i < newErrorSize; i++) {
+                        errorList.remove(errorList.size() - 1);
+                    } //删除在parseExp中加的errorList，每次移除掉最尾部的即可
                     if (peekToken().getTokenType() == TokenType.RBRACK) { //k类错误待会儿自会有人解析，现在是推进工作
                         getNextToken(); //看是=还是其他
                     }

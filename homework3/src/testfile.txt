@@ -1,24 +1,4 @@
-int i = 10 * (20 - 6;
-char c = 'a';
-
-int main() {
-    i = getint()
-    10 + i
-    c = getchar()
-    i = getint(
-
-    /******************/
-
-    ;
-    c = getchar(;
-
-    for (;;) {
-        break
-        {
-          for (;;)
-              continue
-        }
-    }
-
+int main(){
+    a[b(1] = 5;
     return 0;
 }
