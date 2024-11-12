@@ -1,6 +1,17 @@
-int b = 2;
-int main() {
-{const int b = 8;}
-b = 9;
- return 0;
+const int a=1,b=2
+const char c=3,d[1]={0}
+int aa,bb,cc=1,dd
+void fun(){
+a
+b
+aa=getint()
+c
+}
+int main()
+{
+a
+b
+aa
+c
+return 0;
 }

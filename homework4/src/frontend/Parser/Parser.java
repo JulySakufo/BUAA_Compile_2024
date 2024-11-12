@@ -79,7 +79,7 @@ public class Parser {
         root.addChild(parseMainFuncDef());
         infos.add("<CompUnit>");
         if (errorList.isEmpty()) { //有无错误直接看errorList里面有无内容就行了
-            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("symbol.txt"))) {
+            try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework4\\src\\symbol.txt"))) {
                 for (int i = 1; i <= level; i++) {
                     symbolTables.get(i).printSymbol(stdout);
                 }
@@ -88,7 +88,7 @@ public class Parser {
             }
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
-            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("error.txt", true))) {
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework4\\src\\error.txt", true))) {
                 for (MyError error : errorList) {
                     stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
