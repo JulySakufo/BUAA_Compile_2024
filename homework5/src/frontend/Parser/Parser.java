@@ -1,5 +1,6 @@
 package frontend.Parser;
 
+import frontend.Calculator.Calculator;
 import frontend.Error.MyError;
 import frontend.Lexer.Token;
 import frontend.Lexer.TokenType;
@@ -42,7 +43,7 @@ public class Parser {
         initializeSymbolTable();
     }
     
-    public void parseCompUnit() { //CompUnit → {Decl} {FuncDef} MainFuncDef
+    public SyntaxNode parseCompUnit() { //CompUnit → {Decl} {FuncDef} MainFuncDef
         getNextToken();
         while (peekToken().getTokenType() == TokenType.CONSTTK || peekToken().getTokenType() == TokenType.INTTK
                 || peekToken().getTokenType() == TokenType.CHARTK) {
@@ -96,6 +97,7 @@ public class Parser {
             
             }
         }
+        return root;
     }
     
     public SyntaxNode parseDecl() {
@@ -169,7 +171,9 @@ public class Parser {
             addInfo();
             node.addChild(new SyntaxNode("["));
             getNextToken();
-            node.addChild(parseConstExp());
+            SyntaxNode constExpNode = parseConstExp(); //表达式节点
+            node.addChild(constExpNode);
+            symbol.setArrayLength(Calculator.calConstExp(constExpNode, stack));
             if (peekToken().getTokenType() == TokenType.RBRACK) {
                 addInfo();
                 node.addChild(new SyntaxNode("]"));
@@ -242,7 +246,9 @@ public class Parser {
             addInfo(); // }
             getNextToken();
         } else if (peekToken().getTokenType() == TokenType.STRCON) {
-            /*TODO:未添加节点的，不知道怎么写了，待完成*/
+            SyntaxNode child = new SyntaxNode("StringConst");
+            child.addChild(new SyntaxNode(peekToken().getToken()));
+            node.addChild(child);
             addInfo();
             getNextToken();
         } else { //ConstExp
@@ -271,7 +277,9 @@ public class Parser {
             addInfo(); // }
             getNextToken();
         } else if (peekToken().getTokenType() == TokenType.STRCON) {
-            /*TODO:未添加节点的，不知道怎么写了，待完成*/
+            SyntaxNode child = new SyntaxNode("StringConst");
+            child.addChild(new SyntaxNode(peekToken().getToken()));
+            node.addChild(child);
             addInfo();
             getNextToken();
         } else { //ConstExp
@@ -466,15 +474,18 @@ public class Parser {
     
     public SyntaxNode parseAddExp() { //MulExp{+-MulExp}
         SyntaxNode node = new SyntaxNode("AddExp");
-        node.addChild(parseMulExp());
+        node.addChild(parseMulExp());/*TODO:语法树构建错误，需要修改*/
         infos.add("<AddExp>");
         while (peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU) {
-            node.addChild(new SyntaxNode(peekToken().getToken()));
+            SyntaxNode node2 = new SyntaxNode("AddExp");
+            node2.addChild(node);
+            node2.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            node.addChild(parseMulExp());
+            node2.addChild(parseMulExp());
             infos.add("<AddExp>");
             curParaType = 0; //0代表值(变量)的意思
+            node = node2;
         }
         return node;
     }
@@ -484,12 +495,15 @@ public class Parser {
         node.addChild(parseUnaryExp());
         infos.add("<MulExp>");
         while (peekToken().getTokenType() == TokenType.MULT || peekToken().getTokenType() == TokenType.DIV || peekToken().getTokenType() == TokenType.MOD) {
-            node.addChild(new SyntaxNode(peekToken().getToken()));
+            SyntaxNode node2 = new SyntaxNode("MulExp");
+            node2.addChild(node);
+            node2.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            node.addChild(parseUnaryExp());
+            node2.addChild(parseUnaryExp());
             infos.add("<MulExp>");
             curParaType = 0; //包是int型数值
+            node = node2;
         }
         return node;
     }
