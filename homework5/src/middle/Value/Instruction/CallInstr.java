@@ -1,6 +1,7 @@
 package middle.Value.Instruction;
 
 import middle.Type.Type;
+import middle.Type.VoidType;
 import middle.Value.Value;
 
 import java.util.ArrayList;
@@ -25,7 +26,11 @@ public class CallInstr extends Instr {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(name).append(" = call ").append(type).append(" @").append(functionName).append("(");
+        if (type instanceof VoidType) { //无返回值的函数直接调用
+            sb.append("call ").append(type).append(" @").append(functionName).append("(");
+        } else { //有返回值的函数都要装起来
+            sb.append(name).append(" = call ").append(type).append(" @").append(functionName).append("(");
+        }
         if (!funcRParams.isEmpty()) {
             sb.append(funcRParams.get(0).getType()).append(" ").append(funcRParams.get(0).getName());
             for (int i = 1; i < funcRParams.size(); i++) {

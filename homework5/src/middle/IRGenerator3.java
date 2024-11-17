@@ -372,9 +372,12 @@ public class IRGenerator3 {
         }
         if (isFuncDef) { //是函数才把之前的参数指令打印出来
             ArrayList<Param> params = curFunction.getParams();
-            for (Param param : params) {
+            for (int i = 0; i < params.size(); i++) {
+                Param param = params.get(i);
                 curBasicBlock.addInstruction(new AllocaInstr(param.getType(), "%" + virtualReg));
                 curBasicBlock.addInstruction(new StoreInstr(param.getType(), param.getName(), "%" + virtualReg));
+                SymbolTable symbolTable = stack.peek();
+                symbolTable.getSymbol(i).setVirtualReg("%" + virtualReg); //函数参数重新分配寄存器
                 virtualReg++;
             }
         }
@@ -443,6 +446,45 @@ public class IRGenerator3 {
     
     public void generatePrintf(SyntaxNode node) {
         /*TODO*/
+        /*
+         * 其中格式字符只包含 %d 与 %c ，其他 C 语言中的格式字符，如 %f 都当做普通字符原样输出。
+         * node是stmt,node.getChildren.get(2)是StringConst
+         */
+        String stringConst = node.getChildren().get(2).getLastChild().getName();
+        stringConst = stringConst.substring(1, stringConst.length() - 1); //去除双引号
+        ArrayList<Value> operands = new ArrayList<>();
+        for (SyntaxNode child : node.getChildren()) {
+            if (child.getName().equals("Exp")) { //对应一个格式符
+                Value operand = generateExp(child);
+                operands.add(operand);
+            }
+        }
+        int operandIndex = 0; //轮流对应格式符
+        for (int i = 0; i < stringConst.length(); i++) {
+            ArrayList<Value> funcRParams = new ArrayList<>(); //putint,putch的参数只有一个
+            if (stringConst.charAt(i) == '\\') { //该字符对应换行符\n
+                i++;
+                funcRParams.add(new Value(new Integer32Type(), "10"));
+                CallInstr callInstr = new CallInstr(new VoidType(), "putch", "%" + virtualReg, funcRParams);
+                curBasicBlock.addInstruction(callInstr);
+            } else if (stringConst.charAt(i) == '%') { //对应格式符%d,%c
+                i++;
+                funcRParams.add(operands.get(operandIndex));
+                operandIndex++;
+                if (stringConst.charAt(i) == 'd') { //对应%d,使用putint
+                    CallInstr callInstr = new CallInstr(new VoidType(), "putint", "%" + virtualReg, funcRParams);
+                    curBasicBlock.addInstruction(callInstr);
+                } else {
+                    CallInstr callInstr = new CallInstr(new VoidType(), "putch", "%" + virtualReg, funcRParams);
+                    curBasicBlock.addInstruction(callInstr);
+                }
+            } else { //普通字符
+                int value = stringConst.charAt(i);
+                funcRParams.add(new Value(new Integer32Type(), String.valueOf(value)));
+                CallInstr callInstr = new CallInstr(new VoidType(), "putch", "%" + virtualReg, funcRParams);
+                curBasicBlock.addInstruction(callInstr);
+            }
+        }
     }
     
     public void generateIf(SyntaxNode node) {
@@ -579,7 +621,7 @@ public class IRGenerator3 {
                     /*TODO !仅出现在条件表达式 */
                     break;
             }
-        } else {
+        } else { //函数调用
             String name = node.getChildren().get(0).getName(); //函数名ident
             Symbol symbol = getSymbol(name);
             if (!node.getChildren().get(2).getName().equals(")")) { //有参情况

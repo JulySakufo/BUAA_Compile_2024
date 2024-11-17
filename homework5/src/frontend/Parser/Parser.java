@@ -794,6 +794,9 @@ public class Parser {
         addInfo();
         getNextToken(); //StringConst "%d%c"
         /*TODO:不知道怎么写StringConst的语法树，待完成(有必要吗？)*/
+        SyntaxNode child = new SyntaxNode("StringConst");
+        node.addChild(child);
+        child.addChild(new SyntaxNode(peekToken().getToken()));
         setFormatCount(peekToken().getToken()); //将string拿进去分析，看看里面有几个格式符，存进了formatCount里面
         addInfo();
         getNextToken();
