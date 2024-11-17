@@ -74,9 +74,9 @@ public class Calculator {
         }
     }
     
-    public static int calLVal(SyntaxNode node, Stack<SymbolTable> stack) {
+/*    public static int calLVal(SyntaxNode node, Stack<SymbolTable> stack) {
         String name = node.getChildren().get(0).getName();
-        if (isConst(name, stack)) { /*TODO 如果采用等号右端均用cal计算的话，这里要去除isConst */
+        if (isConst(name, stack)) { *//*TODO 如果采用等号右端均用cal计算的话，这里要去除isConst *//*
             if (node.getChildren().size() == 1) { //非数组元素
                 return getValue(name, stack);
             } else { //数组元素
@@ -85,7 +85,17 @@ public class Calculator {
             }
         }
         return 0;
-    }
+    }*/
+    
+    public static int calLVal(SyntaxNode node, Stack<SymbolTable> stack) {
+        String name = node.getChildren().get(0).getName();
+        if (node.getChildren().size() == 1) { //非数组元素
+            return getValue(name, stack);
+        } else { //数组元素
+            int index = calExp(node.getChildren().get(2), stack);
+            return getValue(name, stack, index);
+        }
+    } //无论是否是常量均计算，人为定义哪些exp需要计算就行，变量定义初始化的时候就行
     
     public static int calNumber(SyntaxNode node, Stack<SymbolTable> stack) {
         return Integer.parseInt(node.getChildren().get(0).getName());
@@ -93,7 +103,14 @@ public class Calculator {
     
     public static int calCharacter(SyntaxNode node, Stack<SymbolTable> table) {
         if (node.getChildren().get(0).getName().length() > 3) { //转义字符
-            return node.getChildren().get(0).getName().charAt(2);
+            switch (node.getChildren().get(0).getName().charAt(2)) {
+                case '\"':
+                    return '\"';
+                case '\'':
+                    return '\'';
+                default:
+                    return '\\';
+            }
         } else {
             return node.getChildren().get(0).getName().charAt(1); //本就只有一个字符，考虑外层包围的引号
         }

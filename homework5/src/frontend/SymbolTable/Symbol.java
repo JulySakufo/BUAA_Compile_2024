@@ -14,7 +14,7 @@ public class Symbol {
     private ArrayList<Integer> parasType; //当kind是func时，此内容存放形参para的类型
     private int value; //是常数时的值
     private ArrayList<Integer> values; //是数组时对应的数组元素值
-    private int virtualReg; //局部变量的虚拟寄存器
+    private String virtualReg; //局部变量的虚拟寄存器
     
     public Symbol(String name, String kind, String type, int level) {
         this.name = name;
@@ -90,11 +90,11 @@ public class Symbol {
     }
     
     public String getVirtualReg() { //全局变量只需要@+name即可，局部变量只需要%+virtualReg
-        if (isGlobal) {
-            return "@" + name;
-        } else {
-            return "%" + virtualReg;
-        }
+        return virtualReg;
+    }
+    
+    public void setVirtualReg(String virtualReg) {
+        this.virtualReg = virtualReg;
     }
     
     public void setParasType(ArrayList<Integer> parasType) {
@@ -127,10 +127,6 @@ public class Symbol {
     
     public void setIsGlobal(boolean isGlobal) {
         this.isGlobal = isGlobal;
-    }
-    
-    public void setVirtualReg(int virtualReg) { //局部变量的赋值
-        this.virtualReg = virtualReg;
     }
     
     public boolean isConstChar() {

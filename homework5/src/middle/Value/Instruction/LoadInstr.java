@@ -11,6 +11,6 @@ public class LoadInstr extends Instr {
     
     @Override
     public String toString() { //from是全局变量或局部变量的虚拟寄存器
-        return name + " = load " + type + ", " + type + "*" + from;
+        return name + " = load " + type + ", " + type + "* " + from;
     }
 }

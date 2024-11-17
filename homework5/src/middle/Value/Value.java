@@ -4,7 +4,7 @@ import middle.Type.Type;
 
 public class Value {
     protected Type type;
-    protected String name;
+    protected String name; //变量名或者寄存器的名字
     
     public Value(Type type, String name) {
         this.type = type;
