@@ -447,8 +447,20 @@ public class IRGenerator3 {
         if (node.getChildren().get(1).getName().equals("Exp")) { //有返回值
             Value operand = generateExp(node.getChildren().get(1));
             if (curFuncType.equals("int")) { //int型函数
+                if (operand.getType() instanceof Integer8Type) { //扩展
+                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand);
+                    operand = zeroExtInstr; //截断后的寄存器才是对的
+                    virtualReg++;
+                    curBasicBlock.addInstruction(zeroExtInstr);
+                }
                 curBasicBlock.addInstruction(new ReturnInstr(new Integer32Type(), operand));
             } else { //char型函数
+                if (operand.getType() instanceof Integer32Type) { //截断
+                    TruncInstr truncInstr = new TruncInstr(virtualReg, operand);
+                    operand = truncInstr; //截断后的寄存器才是对的
+                    virtualReg++;
+                    curBasicBlock.addInstruction(truncInstr);
+                }
                 curBasicBlock.addInstruction(new ReturnInstr(new Integer8Type(), operand));
             }
         } else { //无返回值
@@ -565,9 +577,15 @@ public class IRGenerator3 {
                 virtualReg++;
                 return loadInstr; //把load指令返回回去，由binary取load的最前面的虚拟寄存器作为binary的operand
             } else { //ident[Exp]
+                /*TODO getelementType的方式有问题 */
                 Value operand = generateExp(node.getChildren().get(2)); //得到exp的寄存器
-                GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, operand, symbolReg);
-                curBasicBlock.addInstruction(getElementInstr); //得到数组元素
+                if (!curFunction.getName().equals("main")) { //相对位移，防止调用的是参数的数组
+                    GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, operand, symbolReg, 2);
+                    curBasicBlock.addInstruction(getElementInstr); //得到数组元素
+                } else {
+                    GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, operand, symbolReg);
+                    curBasicBlock.addInstruction(getElementInstr); //得到数组元素
+                }
                 virtualReg++;
                 LoadInstr loadInstr = new LoadInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + (virtualReg - 1), "%" + virtualReg);
                 curBasicBlock.addInstruction(loadInstr);
