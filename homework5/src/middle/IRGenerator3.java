@@ -376,7 +376,9 @@ public class IRGenerator3 {
         addLevel();
         curBasicBlock = new BasicBlock(null, "%" + virtualReg);
         curFunction.addBasicBlock(curBasicBlock); //当前函数拥有该块
-        virtualReg++; //函数本身占一个虚拟寄存器
+        if (isFuncDef) { //函数才占寄存器
+            virtualReg++; //函数本身占一个虚拟寄存器
+        }
         if (!isFuncDef) { //函数内部的{BlockItem}块，创建一个表，负责只需要level++即可
             SymbolTable symbolTable = new SymbolTable();
             stack.push(symbolTable);
@@ -401,7 +403,7 @@ public class IRGenerator3 {
                 generateBlockItem(child);
             }
         }
-        if (!curBasicBlock.hasReturnInstr()) {
+        if (!curBasicBlock.hasReturnInstr() && isFuncDef) { //是函数的block并且该block没有return指令
             curBasicBlock.addInstruction(new ReturnInstr(new VoidType())); //加一条ret void指令
         }
         stack.pop();
