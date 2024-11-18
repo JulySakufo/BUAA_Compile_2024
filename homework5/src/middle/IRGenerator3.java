@@ -431,7 +431,7 @@ public class IRGenerator3 {
                 generateFor(node);
                 break;
             case "Block":
-                generateBlock(node, false);
+                generateBlock(node.getChildren().get(0), false);
                 break;
             case "LVal":
                 generateLVal(node);
@@ -540,7 +540,7 @@ public class IRGenerator3 {
                     virtualReg++;
                     break;
                 case "getchar":
-                    curBasicBlock.addInstruction(new CallInstr(new Integer8Type(), "getchar", "%" + virtualReg));
+                    curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), "getchar", "%" + virtualReg));
                     virtualReg++;
                     curBasicBlock.addInstruction(new TruncInstr(virtualReg));
                     curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
