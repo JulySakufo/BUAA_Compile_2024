@@ -175,7 +175,6 @@ public class IRGenerator3 {
                     symbol.setValues(values);
                 }
             } else { //非数组局部变量
-                /*TODO 需要修改*/
                 curBasicBlock.addInstruction(new AllocaInstr(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg));
                 symbol.setVirtualReg("%" + virtualReg);
                 virtualReg++;
@@ -238,7 +237,6 @@ public class IRGenerator3 {
     
     public void generateInitVal(SyntaxNode node, Symbol symbol) {
         if (!symbol.getIsArray()) { //非数组
-            /*TODO 赋初值错误 比如函数调用这种 初值应该就是virtualReg*/
             if (symbol.getIsGlobal()) { //一个非数组的变量是全局变量，要给予初值
                 int result = Calculator.calConstExp(node.getChildren().get(0), stack);
                 symbol.setValue(result);
@@ -459,7 +457,6 @@ public class IRGenerator3 {
     }
     
     public void generatePrintf(SyntaxNode node) {
-        /*TODO*/
         /*
          * 其中格式字符只包含 %d 与 %c ，其他 C 语言中的格式字符，如 %f 都当做普通字符原样输出。
          * node是stmt,node.getChildren.get(2)是StringConst
