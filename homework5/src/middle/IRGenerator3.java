@@ -501,6 +501,13 @@ public class IRGenerator3 {
                 i++;
                 funcRParams.add(operands.get(operandIndex));
                 operandIndex++;
+                if (funcRParams.get(0).getType() instanceof Integer8Type) { //putint,putch都是i32,需要扩展
+                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, funcRParams.get(0));
+                    curBasicBlock.addInstruction(zeroExtInstr);
+                    virtualReg++;
+                    funcRParams.clear();
+                    funcRParams.add(zeroExtInstr); //换条指令给call
+                }
                 if (stringConst.charAt(i) == 'd') { //对应%d,使用putint
                     CallInstr callInstr = new CallInstr(new VoidType(), "putint", "%" + virtualReg, funcRParams);
                     curBasicBlock.addInstruction(callInstr);
