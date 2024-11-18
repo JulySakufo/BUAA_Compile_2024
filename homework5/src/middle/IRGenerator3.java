@@ -401,6 +401,9 @@ public class IRGenerator3 {
                 generateBlockItem(child);
             }
         }
+        if (!curBasicBlock.hasReturnInstr()) {
+            curBasicBlock.addInstruction(new ReturnInstr(new VoidType())); //加一条ret void指令
+        }
         stack.pop();
     }
     
@@ -695,12 +698,16 @@ public class IRGenerator3 {
                 generateFuncRParams(node.getChildren().get(2), funcRParams);
                 CallInstr callInstr = new CallInstr(getLLVMFunctionType(symbol.getType()), name, "%" + virtualReg, funcRParams);
                 curBasicBlock.addInstruction(callInstr);
-                virtualReg++;
+                if (!(getLLVMFunctionType(symbol.getType()) instanceof VoidType)) { //没有返回值就无需存储
+                    virtualReg++;
+                }
                 return callInstr;
             } else { //无参情况
                 CallInstr callInstr = new CallInstr(getLLVMFunctionType(symbol.getType()), name, "%" + virtualReg);
                 curBasicBlock.addInstruction(callInstr);
-                virtualReg++;
+                if (!(getLLVMFunctionType(symbol.getType()) instanceof VoidType)) { //没有返回值就无需存储
+                    virtualReg++;
+                }
                 return callInstr;
             }
         }
