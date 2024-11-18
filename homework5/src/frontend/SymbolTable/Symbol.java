@@ -26,6 +26,7 @@ public class Symbol {
         this.parasType = new ArrayList<>();
         this.value = 0;
         this.values = new ArrayList<>();
+        this.virtualReg = null;
     }
     
     public Symbol(String name, String kind, String type, int level, boolean isGlobal) {
@@ -39,6 +40,7 @@ public class Symbol {
         this.parasType = new ArrayList<>();
         this.value = 0;
         this.values = new ArrayList<>();
+        this.virtualReg = null;
     }
     
     public String getName() {

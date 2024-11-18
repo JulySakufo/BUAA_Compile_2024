@@ -105,7 +105,6 @@ public class IRGenerator3 {
             Symbol symbol = new Symbol(name, "const", type, getStackLevel(stack.peek()), false);
             stack.peek().addSymbol(symbol);
             if (node.getChildren().get(1).getName().equals("[")) { //数组变量
-                /*TODO 说实话我感觉这里就要算出来 不然不知道数组的长度*/
                 symbol.setIsArray(true);
                 SyntaxNode constExpNode = node.getChildren().get(2);
                 int arrayLength = Calculator.calConstExp(constExpNode, stack);
@@ -176,15 +175,15 @@ public class IRGenerator3 {
                     symbol.setValues(values);
                 }
             } else { //非数组局部变量
+                /*TODO 需要修改*/
+                curBasicBlock.addInstruction(new AllocaInstr(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg));
+                symbol.setVirtualReg("%" + virtualReg);
+                virtualReg++;
                 if (node.getLastChild().getName().equals("InitVal")) { //赋值了
                     generateInitVal(node.getLastChild(), symbol);
                 } else { //没有赋值，默认值为0
                     symbol.setValue(0);
                 }
-                curBasicBlock.addInstruction(new AllocaInstr(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg));
-                curBasicBlock.addInstruction(new StoreInstr(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, symbol.getValue()));
-                symbol.setVirtualReg("%" + virtualReg);
-                virtualReg++;
             }
         }
     }
@@ -239,8 +238,19 @@ public class IRGenerator3 {
     
     public void generateInitVal(SyntaxNode node, Symbol symbol) {
         if (!symbol.getIsArray()) { //非数组
-            int result = Calculator.calConstExp(node.getChildren().get(0), stack);
-            symbol.setValue(result);
+            /*TODO 赋初值错误 比如函数调用这种 初值应该就是virtualReg*/
+            if (symbol.getIsGlobal()) { //一个非数组的变量是全局变量，要给予初值
+                int result = Calculator.calConstExp(node.getChildren().get(0), stack);
+                symbol.setValue(result);
+            } else {
+                /*
+                 * 局部变量不计算，通过binaryInstr用寄存器进行中间的运算，且不存初值进去，问就是virtualReg代替计算
+                 * alloca(上层已调用) + store
+                 */
+                Value operand = generateExp(node.getChildren().get(0));
+                StoreInstr storeInstr = new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), operand, symbol.getVirtualReg());
+                curBasicBlock.addInstruction(storeInstr);
+            }
         } else { //数组
             int arrayLength = symbol.getArrayLength();
             ArrayList<SyntaxNode> children = node.getChildren();
@@ -248,11 +258,13 @@ public class IRGenerator3 {
             int index = 0;
             for (SyntaxNode child : children) { //看有多少是有初值的
                 if (child.getName().equals("Exp")) {
-                    int result = Calculator.calConstExp(child, stack);
-                    values.add(result);
-                    if (curFunction != null) { //局部变量数组，初值进行getElementPtr并进行store
+                    if (symbol.getIsGlobal()) { //全局变量，要计算出数组的值的
+                        int result = Calculator.calConstExp(child, stack);
+                        values.add(result);
+                    } else { //局部变量数组，初值进行getElementPtr并进行store
                         curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
-                        curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, result));
+                        Value operand = generateExp(child); //得到存储结果的寄存器
+                        curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), operand, "%" + virtualReg));
                         virtualReg++;
                         index++;
                     }
@@ -277,10 +289,12 @@ public class IRGenerator3 {
                     }
                 }
             }
-            for (int i = values.size(); i < arrayLength; i++) { //补足未初始化的元素
-                values.add(0);
+            if (symbol.getIsGlobal()) { //全局变量才需要补足初值，局部变量不需要
+                for (int i = values.size(); i < arrayLength; i++) { //补足未初始化的元素
+                    values.add(0);
+                }
+                symbol.setValues(values); //给元素赋值
             }
-            symbol.setValues(values); //给元素赋值
         }
     }
     
@@ -549,7 +563,7 @@ public class IRGenerator3 {
             Symbol symbol = getSymbol(name);
             String symbolReg = symbol.getVirtualReg(); //symbol对应的寄存器
             if (node.getChildren().size() == 1) { //ident
-                LoadInstr loadInstr = new LoadInstr(new Integer32Type(), symbolReg, "%" + virtualReg);
+                LoadInstr loadInstr = new LoadInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), symbolReg, "%" + virtualReg);
                 curBasicBlock.addInstruction(loadInstr);
                 virtualReg++;
                 return loadInstr; //把load指令返回回去，由binary取load的最前面的虚拟寄存器作为binary的operand
@@ -558,7 +572,7 @@ public class IRGenerator3 {
                 GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, operand, symbolReg);
                 curBasicBlock.addInstruction(getElementInstr); //得到数组元素
                 virtualReg++;
-                LoadInstr loadInstr = new LoadInstr(new Integer32Type(), "%" + (virtualReg - 1), "%" + virtualReg);
+                LoadInstr loadInstr = new LoadInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + (virtualReg - 1), "%" + virtualReg);
                 curBasicBlock.addInstruction(loadInstr);
                 virtualReg++;
                 return loadInstr;
@@ -576,6 +590,16 @@ public class IRGenerator3 {
             Value operand1 = generateAddExp(children.get(0)); //AddExp生成指令，得出operand1
             Value operand2 = generateMulExp(children.get(2)); //MulExp右边生成指令，得出operand2
             String op = children.get(1).getName();
+            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
+                virtualReg++;
+            }
+            if (operand2.getType() instanceof Integer8Type) {
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                operand2 = new Value(new Integer32Type(), "%" + virtualReg);
+                virtualReg++;
+            }
             curBasicBlock.addInstruction(new BinaryInstr(new Integer32Type(), operand1, operand2, op, "%" + virtualReg));
             virtualReg++;
             return new Value(new Integer32Type(), "%" + (virtualReg - 1)); //运算的结果保存在virtualReg，由virtualReg参与后续的binaryInstr
@@ -590,6 +614,16 @@ public class IRGenerator3 {
             Value operand1 = generateMulExp(children.get(0));
             Value operand2 = generateUnaryExp(children.get(2));
             String op = children.get(1).getName();
+            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
+                virtualReg++;
+            }
+            if (operand2.getType() instanceof Integer8Type) {
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                operand2 = new Value(new Integer32Type(), "%" + virtualReg);
+                virtualReg++;
+            }
             curBasicBlock.addInstruction(new BinaryInstr(new Integer32Type(), operand1, operand2, op, "%" + virtualReg));
             virtualReg++;
             return new Value(new Integer32Type(), "%" + (virtualReg - 1));
@@ -646,7 +680,22 @@ public class IRGenerator3 {
             case "Number":
                 return new Value(new Integer32Type(), node.getChildren().get(0).getChildren().get(0).getName());
             case "Character":
-                return new Value(new Integer8Type(), node.getChildren().get(0).getChildren().get(0).getName());
+                //return new Value(new Integer8Type(), node.getChildren().get(0).getChildren().get(0).getName());
+                String charConst = node.getChildren().get(0).getChildren().get(0).getName();
+                charConst = charConst.substring(1, charConst.length() - 1);
+                if (charConst.charAt(0) == '\\') { //考虑转义字符
+                    switch (charConst.charAt(1)) {
+                        case '\"':
+                            charConst = String.valueOf(34);
+                        case '\'':
+                            charConst = String.valueOf(39);
+                        default:
+                            charConst = String.valueOf(92);
+                    }
+                } else {
+                    charConst = String.valueOf((int) charConst.charAt(0));
+                }
+                return new Value(new Integer8Type(), charConst);
             case "LVal":
                 return generateLVal(node.getChildren().get(0));
             default:

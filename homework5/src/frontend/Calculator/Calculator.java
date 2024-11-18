@@ -127,7 +127,7 @@ public class Calculator {
         return false;
     }
     
-    public static int getValue(String name, Stack<SymbolTable> stack) {
+/*    public static int getValue(String name, Stack<SymbolTable> stack) {
         int size = stack.size() - 1;
         for (int i = size; i >= 0; i--) {
             SymbolTable symbolTable = stack.get(i);
@@ -135,6 +135,17 @@ public class Calculator {
                 if (symbolTable.getSymbol(name).isConst()) {
                     return symbolTable.getSymbol(name).getValue();
                 }
+            }
+        }
+        return 0;
+    }*/
+    
+    public static int getValue(String name, Stack<SymbolTable> stack) {
+        int size = stack.size() - 1;
+        for (int i = size; i >= 0; i--) {
+            SymbolTable symbolTable = stack.get(i);
+            if (symbolTable.hasSymbol(name)) {
+                return symbolTable.getSymbol(name).getValue();
             }
         }
         return 0;
