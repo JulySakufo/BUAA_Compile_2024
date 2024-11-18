@@ -386,11 +386,13 @@ public class IRGenerator3 {
             ArrayList<Param> params = curFunction.getParams();
             for (int i = 0; i < params.size(); i++) {
                 Param param = params.get(i);
-                curBasicBlock.addInstruction(new AllocaInstr(param.getType(), "%" + virtualReg));
-                curBasicBlock.addInstruction(new StoreInstr(param.getType(), param.getName(), "%" + virtualReg));
-                SymbolTable symbolTable = stack.peek();
-                symbolTable.getSymbol(i).setVirtualReg("%" + virtualReg); //函数参数重新分配寄存器
-                virtualReg++;
+                if ((param.getType() instanceof Integer32Type) || (param.getType() instanceof Integer8Type)) { //数组不需要重新分配
+                    curBasicBlock.addInstruction(new AllocaInstr(param.getType(), "%" + virtualReg));
+                    curBasicBlock.addInstruction(new StoreInstr(param.getType(), param.getName(), "%" + virtualReg));
+                    SymbolTable symbolTable = stack.peek();
+                    symbolTable.getSymbol(i).setVirtualReg("%" + virtualReg); //函数参数重新分配寄存器
+                    virtualReg++;
+                }
             }
         }
         ArrayList<SyntaxNode> children = node.getChildren();
@@ -572,10 +574,25 @@ public class IRGenerator3 {
             Symbol symbol = getSymbol(name);
             String symbolReg = symbol.getVirtualReg(); //symbol对应的寄存器
             if (node.getChildren().size() == 1) { //ident
-                LoadInstr loadInstr = new LoadInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), symbolReg, "%" + virtualReg);
-                curBasicBlock.addInstruction(loadInstr);
-                virtualReg++;
-                return loadInstr; //把load指令返回回去，由binary取load的最前面的虚拟寄存器作为binary的operand
+                if (!symbol.getIsArray()) {
+                    LoadInstr loadInstr = new LoadInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), symbolReg, "%" + virtualReg);
+                    curBasicBlock.addInstruction(loadInstr);
+                    virtualReg++;
+                    return loadInstr; //把load指令返回回去，由binary取load的最前面的虚拟寄存器作为binary的operand
+                } else { //数组整个整体，不是单独的元素
+                    if (!curFunction.getName().equals("main")) { //相对位移
+                        /*TODO 函数嵌套函数还有问题 */
+                        GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, new Value(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), String.valueOf(0)), symbolReg, 2);
+                        curBasicBlock.addInstruction(getElementInstr);
+                        virtualReg++;
+                        return getElementInstr;
+                    } else {
+                        GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, 0, symbolReg);
+                        curBasicBlock.addInstruction(getElementInstr);
+                        virtualReg++;
+                        return getElementInstr;
+                    }
+                }
             } else { //ident[Exp]
                 /*TODO getelementType的方式有问题 */
                 Value operand = generateExp(node.getChildren().get(2)); //得到exp的寄存器

@@ -1,5 +1,6 @@
 package middle.Value.Instruction;
 
+import middle.Type.ArrayType;
 import middle.Type.Type;
 import middle.Type.VoidType;
 import middle.Value.Value;
@@ -32,9 +33,17 @@ public class CallInstr extends Instr {
             sb.append(name).append(" = call ").append(type).append(" @").append(functionName).append("(");
         }
         if (!funcRParams.isEmpty()) {
-            sb.append(funcRParams.get(0).getType()).append(" ").append(funcRParams.get(0).getName());
+            if (!(funcRParams.get(0).getType() instanceof ArrayType)) { //不是arrayType
+                sb.append(funcRParams.get(0).getType()).append(" ").append(funcRParams.get(0).getName());
+            } else { //是arrayType
+                sb.append(funcRParams.get(0).getType()).append("* ").append(funcRParams.get(0).getName());
+            }
             for (int i = 1; i < funcRParams.size(); i++) {
-                sb.append(", ").append(funcRParams.get(i).getType()).append(" ").append(funcRParams.get(i).getName());
+                if (!(funcRParams.get(i).getType() instanceof ArrayType)) { //不是arrayType
+                    sb.append(", ").append(funcRParams.get(i).getType()).append(" ").append(funcRParams.get(i).getName());
+                } else { //是arrayType
+                    sb.append(", ").append(funcRParams.get(i).getType()).append("* ").append(funcRParams.get(i).getName());
+                }
             }
         }
         sb.append(")");

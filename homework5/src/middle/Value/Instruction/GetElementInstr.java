@@ -24,7 +24,7 @@ public class GetElementInstr extends Instr {
         this.flag = 1;
     }
     
-    public GetElementInstr(Type type, String name, Value operand, String lastName, int flag) {
+    public GetElementInstr(Type type, String name, Value operand, String lastName, int flag) { //相对位移
         super(type, name);
         operands.add(operand);
         this.lastName = lastName;
