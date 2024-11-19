@@ -594,6 +594,7 @@ public class IRGenerator3 {
                             curBasicBlock.addInstruction(truncInstr);
                             operand = truncInstr;
                         }
+                        virtualReg++; //新增了一条语句，virtualReg应该自增，指向下一个未分配的虚拟寄存器
                     }
                     curBasicBlock.addInstruction(new StoreInstr(getLLVMFunctionType(symbol.getType()), operand, symbolReg));
             }
