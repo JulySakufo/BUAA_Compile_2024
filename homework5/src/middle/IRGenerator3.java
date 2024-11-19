@@ -246,6 +246,19 @@ public class IRGenerator3 {
                  * alloca(上层已调用) + store
                  */
                 Value operand = generateExp(node.getChildren().get(0));
+                if (!twoTypeMatch(operand.getType(), getLLVMFunctionType(symbol.getType()))) { //operand是i8,symbol是i32，需要扩展
+                    if (getLLVMFunctionType(symbol.getType()) instanceof Integer32Type) {
+                        ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer8Type(), "%" + virtualReg, operand);
+                        curBasicBlock.addInstruction(zeroExtInstr);
+                        virtualReg++;
+                        operand = zeroExtInstr;
+                    } else { //operand是i32,symbol是i8，需要截断
+                        TruncInstr truncInstr = new TruncInstr(virtualReg);
+                        curBasicBlock.addInstruction(truncInstr);
+                        virtualReg++;
+                        operand = truncInstr;
+                    }
+                }
                 StoreInstr storeInstr = new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), operand, symbol.getVirtualReg());
                 curBasicBlock.addInstruction(storeInstr);
             }
@@ -261,9 +274,24 @@ public class IRGenerator3 {
                         values.add(result);
                     } else { //局部变量数组，初值进行getElementPtr并进行store
                         curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
+                        /* TODO */
+                        int lastVirtualReg = virtualReg; // 记录store需要的寄存器
+                        virtualReg++; //提前给表达式可能产生的一系列指令留出可以使用的寄存器，因为lastVirtualReg已经预留给store使用了
                         Value operand = generateExp(child); //得到存储结果的寄存器
-                        curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), operand, "%" + virtualReg));
-                        virtualReg++;
+                        if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), operand.getType())) { //不匹配则需要截断或扩展
+                            if (getLLVMFunctionType(symbol.getType()) instanceof Integer32Type) { //operand是i8，扩展
+                                ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand);
+                                curBasicBlock.addInstruction(zeroExtInstr);
+                                operand = zeroExtInstr;
+                                virtualReg++; //指向未使用的寄存器
+                            } else {
+                                TruncInstr truncInstr = new TruncInstr(virtualReg, operand);
+                                curBasicBlock.addInstruction(truncInstr);
+                                operand = truncInstr;
+                                virtualReg++;
+                            }
+                        }
+                        curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), operand, "%" + lastVirtualReg));
                         index++;
                     }
                 } else if (child.getName().equals("StringConst")) {
