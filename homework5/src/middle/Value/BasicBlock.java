@@ -18,8 +18,12 @@ public class BasicBlock extends Value {
         instructions.add(instr);
     }
     
-    public boolean hasReturnInstr() { //看该块的最后一条语句是否是return
-        return instructions.get(instructions.size() - 1) instanceof ReturnInstr;
+    public boolean hasReturnInstr() { //看该块的最后一条语句是否是return(块里没有语句,有语句)
+        if (!instructions.isEmpty()) { //instructions不为空，最后一条语句是不是return
+            return instructions.get(instructions.size() - 1) instanceof ReturnInstr;
+        } else { //instructions是空，绝对没有return
+            return false;
+        }
     }
     
     @Override
