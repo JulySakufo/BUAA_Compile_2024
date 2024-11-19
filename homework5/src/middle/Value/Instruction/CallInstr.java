@@ -35,14 +35,14 @@ public class CallInstr extends Instr {
         if (!funcRParams.isEmpty()) {
             if (!(funcRParams.get(0).getType() instanceof ArrayType)) { //不是arrayType
                 sb.append(funcRParams.get(0).getType()).append(" ").append(funcRParams.get(0).getName());
-            } else { //是arrayType
-                sb.append(funcRParams.get(0).getType()).append("* ").append(funcRParams.get(0).getName());
+            } else { //是arrayType,但是call指令的参数不能有数组长度[5 x i32]，只能表示成i32*,所以要取getElementType
+                sb.append(((ArrayType) funcRParams.get(0).getType()).getElementType()).append("* ").append(funcRParams.get(0).getName());
             }
             for (int i = 1; i < funcRParams.size(); i++) {
                 if (!(funcRParams.get(i).getType() instanceof ArrayType)) { //不是arrayType
                     sb.append(", ").append(funcRParams.get(i).getType()).append(" ").append(funcRParams.get(i).getName());
-                } else { //是arrayType
-                    sb.append(", ").append(funcRParams.get(i).getType()).append("* ").append(funcRParams.get(i).getName());
+                } else { //是arrayType,但是call指令的参数不能有数组长度[5 x i32]，只能表示成i32*,所以要取getElementType
+                    sb.append(", ").append(((ArrayType) funcRParams.get(i).getType()).getElementType()).append("* ").append(funcRParams.get(i).getName());
                 }
             }
         }
