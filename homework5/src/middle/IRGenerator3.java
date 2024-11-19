@@ -562,19 +562,40 @@ public class IRGenerator3 {
             switch (node.getChildren().get(2).getName()) {
                 case "getint":
                     curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), "getint", "%" + virtualReg));
-                    curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), "%" + virtualReg, symbolReg));
+                    if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) {
+                        virtualReg++;
+                        curBasicBlock.addInstruction(new TruncInstr(virtualReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
+                    } else {
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), "%" + virtualReg, symbolReg));
+                    }
                     virtualReg++;
                     break;
                 case "getchar":
                     curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), "getchar", "%" + virtualReg));
-                    virtualReg++;
-                    curBasicBlock.addInstruction(new TruncInstr(virtualReg));
-                    curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
+                    if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) { //char = getchar()，getchar返回值是i32
+                        virtualReg++;
+                        curBasicBlock.addInstruction(new TruncInstr(virtualReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
+                    } else { //i32对i32
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), "%" + virtualReg, symbolReg));
+                    }
                     virtualReg++;
                     break;
                 default: // LVal = Exp形式,赋值语句
                     Value operand = generateExp(node.getChildren().get(2)); //拿的是exp运算出来的储存结果的寄存器%virtualReg或者纯数字
-                    curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), operand, symbolReg));
+                    if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), operand.getType())) { //二者类型不匹配，截断或扩展
+                        if (getLLVMFunctionType(symbol.getType()) instanceof Integer32Type) { //8->32,zext
+                            ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer8Type(), "%" + virtualReg, operand);
+                            curBasicBlock.addInstruction(zeroExtInstr);
+                            operand = zeroExtInstr; //指向新寄存器
+                        } else { //32->8,trunc
+                            TruncInstr truncInstr = new TruncInstr(virtualReg, operand);
+                            curBasicBlock.addInstruction(truncInstr);
+                            operand = truncInstr;
+                        }
+                    }
+                    curBasicBlock.addInstruction(new StoreInstr(getLLVMFunctionType(symbol.getType()), operand, symbolReg));
             }
             return null;
         } else {
@@ -799,5 +820,9 @@ public class IRGenerator3 {
             default:
                 return new VoidType();
         }
+    }
+    
+    public boolean twoTypeMatch(Type type1, Type type2) { //两个类型是否是一种类型
+        return type1.toString().equals(type2.toString());
     }
 }
