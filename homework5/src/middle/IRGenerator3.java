@@ -253,7 +253,7 @@ public class IRGenerator3 {
                         virtualReg++;
                         operand = zeroExtInstr;
                     } else { //operand是i32,symbol是i8，需要截断
-                        TruncInstr truncInstr = new TruncInstr(virtualReg);
+                        TruncInstr truncInstr = new TruncInstr(virtualReg, operand);
                         curBasicBlock.addInstruction(truncInstr);
                         virtualReg++;
                         operand = truncInstr;
