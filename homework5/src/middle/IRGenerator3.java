@@ -274,7 +274,6 @@ public class IRGenerator3 {
                         values.add(result);
                     } else { //局部变量数组，初值进行getElementPtr并进行store
                         curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
-                        /* TODO */
                         int lastVirtualReg = virtualReg; // 记录store需要的寄存器
                         virtualReg++; //提前给表达式可能产生的一系列指令留出可以使用的寄存器，因为lastVirtualReg已经预留给store使用了
                         Value operand = generateExp(child); //得到存储结果的寄存器
@@ -581,8 +580,13 @@ public class IRGenerator3 {
             String symbolReg = symbol.getVirtualReg(); //symbol对应的寄存器
             if (node.getChildren().get(0).getChildren().size() > 1) { //数组 ident[Exp]
                 Value operand = generateExp(node.getChildren().get(0).getChildren().get(2)); //exp的寄存器
-                GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, operand, symbolReg);
-                curBasicBlock.addInstruction(getElementInstr);
+                if (!curFunction.getName().equals("main")) { //相对位移，防止调用的是参数的数组
+                    GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, operand, symbolReg, 2);
+                    curBasicBlock.addInstruction(getElementInstr); //得到数组元素
+                } else {
+                    GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, operand, symbolReg);
+                    curBasicBlock.addInstruction(getElementInstr); //得到数组元素
+                }
                 symbolReg = "%" + virtualReg; //数组的寄存器要换过来，因为使用了getElementType
                 virtualReg++;
             }
@@ -610,7 +614,7 @@ public class IRGenerator3 {
                     }
                     virtualReg++;
                     break;
-                default: // LVal = Exp形式,赋值语句
+                default: // LVal = Exp形式的Exp分析,赋值语句
                     Value operand = generateExp(node.getChildren().get(2)); //拿的是exp运算出来的储存结果的寄存器%virtualReg或者纯数字
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), operand.getType())) { //二者类型不匹配，截断或扩展
                         if (getLLVMFunctionType(symbol.getType()) instanceof Integer32Type) { //8->32,zext
