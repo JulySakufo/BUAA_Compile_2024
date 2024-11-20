@@ -648,7 +648,6 @@ public class IRGenerator3 {
                     return loadInstr; //把load指令返回回去，由binary取load的最前面的虚拟寄存器作为binary的operand
                 } else { //数组整个整体，不是单独的元素
                     if (!curFunction.getName().equals("main") && !symbol.getIsGlobal()) { //相对位移
-                        /*TODO 函数嵌套函数还有问题 */
                         GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, new Value(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), String.valueOf(0)), symbolReg, 2);
                         curBasicBlock.addInstruction(getElementInstr);
                         virtualReg++;
