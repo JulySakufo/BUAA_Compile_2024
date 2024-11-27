@@ -33,7 +33,7 @@ public class GetElementInstr extends Instr {
     
     @Override
     public String toString() {
-        if (flag == 0) {
+        if (flag == 0) {  /*TODO 数组的偏移可能全部要改成 i32 0, i32 index或者i64 0, i64 index*/
             if (((ArrayType) type).getElementType() instanceof Integer32Type) {
                 return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i32 0, i32 " + index;
             } else {
