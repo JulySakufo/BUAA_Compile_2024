@@ -25,6 +25,7 @@ public class IRGenerator {
     private Module module;
     private Function curFunction;
     private BasicBlock curBasicBlock;
+    private Stack<ArrayList<BasicBlock>> forLoopStack;
     
     public IRGenerator(SyntaxNode root) {
         this.root = root;
@@ -36,6 +37,7 @@ public class IRGenerator {
         this.module = new Module();
         this.curFunction = null;
         this.curBasicBlock = null;
+        this.forLoopStack = new Stack<>();
         initializeSymbolTable();
     }
     
@@ -590,11 +592,15 @@ public class IRGenerator {
     }
     
     public void generateBreak(SyntaxNode node) {
-    
+        BasicBlock nextBlock = forLoopStack.peek().get(1);
+        BranchInstr branchInstr = new BranchInstr(nextBlock);
+        curBasicBlock.addInstruction(branchInstr);
     }
     
     public void generateContinue(SyntaxNode node) {
-    
+        BasicBlock forStmtBlock = forLoopStack.peek().get(0);
+        BranchInstr branchInstr = new BranchInstr(forStmtBlock);
+        curBasicBlock.addInstruction(branchInstr);
     }
     
     public void generateFor(SyntaxNode node) { //node是Stmt
@@ -602,11 +608,15 @@ public class IRGenerator {
          * ForStmt->Cond->Stmt->ForStmt(如果都有的话分析顺序)
          */
         ArrayList<SyntaxNode> children = node.getChildren();
+        ArrayList<BasicBlock> arrayList = new ArrayList<>();
+        forLoopStack.push(arrayList);
         boolean isFirstForStmt = true;
         BasicBlock condBlock = new BasicBlock(null, null); //对应cond所在块编号
         BasicBlock stmtBlock = new BasicBlock(null, null); //对应stmt所在块编号
         BasicBlock forStmtBlock = new BasicBlock(null, null); //对应最后一个forstmt所在块编号
         BasicBlock nextBlock = new BasicBlock(null, null); //对应for循环结束后的块编号
+        arrayList.add(forStmtBlock);
+        arrayList.add(nextBlock); //去指引stmt的br
         for (SyntaxNode child : children) {
             if (child.getName().equals("ForStmt")) { //一共两次
                 if (isFirstForStmt) {
@@ -643,6 +653,7 @@ public class IRGenerator {
                 curFunction.addBasicBlock(forStmtBlock);
             }
         }
+        forLoopStack.pop(); //弹出
     }
     
     public void generateForStmt(SyntaxNode node) {

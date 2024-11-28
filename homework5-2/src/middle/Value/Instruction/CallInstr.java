@@ -45,7 +45,7 @@ public class CallInstr extends Instr {
             for (int i = 1; i < funcRParams.size(); i++) {
                 if (!(funcRParams.get(i).getType() instanceof ArrayType)) { //不是arrayType
                     if (funcRParams.get(i) instanceof GetElementInstr) { //是arrayType,但是用的相对位移，所以这里的type是i32
-                        sb.append(funcRParams.get(i).getType()).append("* ").append(funcRParams.get(i).getName());
+                        sb.append(", ").append(funcRParams.get(i).getType()).append("* ").append(funcRParams.get(i).getName());
                     } else {
                         sb.append(", ").append(funcRParams.get(i).getType()).append(" ").append(funcRParams.get(i).getName());
                     }
