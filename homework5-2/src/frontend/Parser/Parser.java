@@ -688,11 +688,14 @@ public class Parser {
         infos.add("<RelExp>");
         while (peekToken().getTokenType() == TokenType.LSS || peekToken().getTokenType() == TokenType.GRE
                 || peekToken().getTokenType() == TokenType.LEQ || peekToken().getTokenType() == TokenType.GEQ) {
-            node.addChild(new SyntaxNode(peekToken().getToken()));
+            SyntaxNode node2 = new SyntaxNode("RelExp");
+            node2.addChild(node);
+            node2.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            node.addChild(parseAddExp());
+            node2.addChild(parseAddExp());
             infos.add("<RelExp>");
+            node = node2;
         }
         return node;
     }
@@ -702,11 +705,14 @@ public class Parser {
         node.addChild(parseRelExp());
         infos.add("<EqExp>");
         while (peekToken().getTokenType() == TokenType.EQL || peekToken().getTokenType() == TokenType.NEQ) {
-            node.addChild(new SyntaxNode(peekToken().getToken()));
+            SyntaxNode node2 = new SyntaxNode("EqExp");
+            node2.addChild(node);
+            node2.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            node.addChild(parseRelExp());
+            node2.addChild(parseRelExp());
             infos.add("<EqExp>");
+            node = node2;
         }
         return node;
     }
@@ -716,11 +722,14 @@ public class Parser {
         node.addChild(parseEqExp());
         infos.add("<LAndExp>");
         while (peekToken().getTokenType() == TokenType.AND) {
-            node.addChild(new SyntaxNode(peekToken().getToken()));
+            SyntaxNode node2 = new SyntaxNode("LAndExp");
+            node2.addChild(node);
+            node2.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            node.addChild(parseEqExp());
+            node2.addChild(parseEqExp());
             infos.add("<LAndExp>");
+            node = node2;
         }
         return node;
     }
@@ -730,11 +739,14 @@ public class Parser {
         node.addChild(parseLAndExp());
         infos.add("<LOrExp>");
         while (peekToken().getTokenType() == TokenType.OR) {
-            node.addChild(new SyntaxNode(peekToken().getToken()));
+            SyntaxNode node2 = new SyntaxNode("LOrExp");
+            node2.addChild(node);
+            node2.addChild(new SyntaxNode(peekToken().getToken()));
             addInfo();
             getNextToken();
-            node.addChild(parseLAndExp());
+            node2.addChild(parseLAndExp());
             infos.add("<LOrExp>");
+            node = node2;
         }
         return node;
     }

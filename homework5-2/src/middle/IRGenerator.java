@@ -400,9 +400,9 @@ public class IRGenerator {
     
     public void generateBlock(SyntaxNode node, boolean isFuncDef) {
         addLevel();
-        curBasicBlock = new BasicBlock(null, "%" + virtualReg);
-        curFunction.addBasicBlock(curBasicBlock); //当前函数拥有该块
         if (isFuncDef) { //函数才占寄存器
+            curBasicBlock = new BasicBlock(null, "%" + virtualReg);
+            curFunction.addBasicBlock(curBasicBlock); //当前函数拥有该块
             virtualReg++; //函数本身占一个虚拟寄存器
         }
         if (!isFuncDef) { //函数内部的{BlockItem}块，创建一个表，负责只需要level++即可
@@ -550,8 +550,43 @@ public class IRGenerator {
         }
     }
     
-    public void generateIf(SyntaxNode node) {
+    public void generateIf(SyntaxNode node) { //node是stmt
+        ArrayList<SyntaxNode> children = node.getChildren();
+        BasicBlock stmt1 = new BasicBlock(null, null);
+        BasicBlock stmt2 = new BasicBlock(null, null);
+        BasicBlock nextBlock = new BasicBlock(null, null);
+        
+        if (children.size() > 5) { //有else语句
+            /*TODO 下面这个式子真的对吗*/
+            Value operand = generateCond(children.get(2), stmt2, nextBlock); //分析出来的寄存器应该是个ICmpInstr
+            curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), stmt1, stmt2));
+        } else { //无else语句
+            /*TODO 下面这个式子真的对吗*/
+            Value operand = generateCond(children.get(2), null, nextBlock); //分析出来的寄存器应该是个ICmpInstr
+            curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), stmt1, nextBlock));
+        }
+        stmt1.setName("%" + virtualReg);
+        curBasicBlock = stmt1;
+        virtualReg++;
+        curFunction.addBasicBlock(curBasicBlock);
+        generateStmt(children.get(4)); //解析if块语句
+        if (children.size() > 5) { //有else语句
+            stmt2.setName("%" + virtualReg);
+            virtualReg++;
+            curBasicBlock.addInstruction(new BranchInstr(nextBlock)); //if结束后跳转到if-else语句结束的block
+            curBasicBlock = stmt2; //即将进入else进行解析
+            curFunction.addBasicBlock(curBasicBlock);
+            generateStmt(children.get(6)); //解析else块语句
+        }
+        nextBlock.setName("%" + virtualReg);
+        virtualReg++;
+        curBasicBlock.addInstruction(new BranchInstr(nextBlock)); //无条件跳转到nextBlock块
+        curBasicBlock = nextBlock; //if块加上br后切换到if语句之后的block
+        curFunction.addBasicBlock(curBasicBlock);
+    }
     
+    public Value generateCond(SyntaxNode node, BasicBlock stmt2, BasicBlock nextBlock) {
+        return generateLOrExp(node.getChildren().get(0), stmt2, nextBlock);
     }
     
     public void generateBreak(SyntaxNode node) {
@@ -562,8 +597,56 @@ public class IRGenerator {
     
     }
     
-    public void generateFor(SyntaxNode node) {
+    public void generateFor(SyntaxNode node) { //node是Stmt
+        /*
+         * ForStmt->Cond->Stmt->ForStmt(如果都有的话分析顺序)
+         */
+        ArrayList<SyntaxNode> children = node.getChildren();
+        boolean isFirstForStmt = true;
+        BasicBlock condBlock = new BasicBlock(null, null); //对应cond所在块编号
+        BasicBlock stmtBlock = new BasicBlock(null, null); //对应stmt所在块编号
+        BasicBlock forStmtBlock = new BasicBlock(null, null); //对应最后一个forstmt所在块编号
+        BasicBlock nextBlock = new BasicBlock(null, null); //对应for循环结束后的块编号
+        for (SyntaxNode child : children) {
+            if (child.getName().equals("ForStmt")) { //一共两次
+                if (isFirstForStmt) {
+                    generateForStmt(child);
+                    isFirstForStmt = false;
+                    BranchInstr branchInstr = new BranchInstr(condBlock);
+                    condBlock.setName("%" + virtualReg);
+                    virtualReg++;
+                    curBasicBlock.addInstruction(branchInstr);
+                    curBasicBlock = condBlock;
+                    curFunction.addBasicBlock(curBasicBlock);
+                } else {
+                    generateForStmt(child);
+                    BranchInstr branchInstr = new BranchInstr(condBlock);
+                    nextBlock.setName("%" + virtualReg);
+                    virtualReg++;
+                    curBasicBlock.addInstruction(branchInstr);
+                    curBasicBlock = nextBlock;
+                    curFunction.addBasicBlock(curBasicBlock);
+                }
+            } else if (child.getName().equals("Cond")) {
+                Value operand = generateCond(child, null, nextBlock);
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), stmtBlock, nextBlock));
+                stmtBlock.setName("%" + virtualReg);
+                curBasicBlock = stmtBlock;
+                virtualReg++;
+                curFunction.addBasicBlock(curBasicBlock);
+                /*TODO break or continue的处理 */
+                generateStmt(node.getLastChild());
+                forStmtBlock.setName("%" + virtualReg);
+                virtualReg++;
+                curBasicBlock.addInstruction(new BranchInstr(forStmtBlock));
+                curBasicBlock = forStmtBlock;
+                curFunction.addBasicBlock(forStmtBlock);
+            }
+        }
+    }
     
+    public void generateForStmt(SyntaxNode node) {
+        generateLVal(node); //LVal = Exp最后一条是Store，接下来接一个无条件跳转,到下一个块
     }
     
     public Value generateLVal(SyntaxNode node) {
@@ -572,7 +655,8 @@ public class IRGenerator {
          *  LVal '=' 'getint''('')'';'
          *  LVal '=' 'getchar''('')'';'
          */
-        if (node.getName().equals("Stmt")) {
+        if (node.getName().equals("Stmt") || node.getName().equals("ForStmt")) {
+            //此处的ForStmt仅仅为了重复利用LVal = Exp的解析
             /*TODO 因为有Stmt->LVal和Stmt->Exp->...->LVal两种情况，所以后面可以分成两个函数 */
             String name = node.getChildren().get(0).getChildren().get(0).getName(); //ident
             Symbol symbol = getSymbol(name);
@@ -750,7 +834,11 @@ public class IRGenerator {
                     return binaryInstr; //将二目运算的结果的寄存器返回去用于store
                 case "!":
                     /*TODO !仅出现在条件表达式 */
-                    break;
+                    Value operand2 = generateUnaryExp(node.getChildren().get(1));
+                    ICmpInstr iCmpInstr = new ICmpInstr(operand2.getType(), "%" + virtualReg, operand2, new Value(new Integer32Type(), "0"), "eq");
+                    virtualReg++;
+                    curBasicBlock.addInstruction(iCmpInstr);
+                    return iCmpInstr;
             }
         } else { //函数调用
             String name = node.getChildren().get(0).getName(); //函数名ident
@@ -801,6 +889,120 @@ public class IRGenerator {
                 return generateLVal(node.getChildren().get(0));
             default:
                 return generateExp(node.getChildren().get(1));
+        }
+    }
+    
+    public Value generateLOrExp(SyntaxNode node, BasicBlock stmt2, BasicBlock nextBlock) { //短路求值
+        /*
+         * LOrExp → LAndExp | LOrExp '||' LAndExp
+         */
+        ArrayList<SyntaxNode> children = node.getChildren();
+        if (children.size() > 1) {
+            Value operand1 = generateLOrExp(children.get(0), stmt2, nextBlock);
+            BasicBlock basicBlock = new BasicBlock(null, "%" + virtualReg); //遇到||需要创块
+            if (stmt2 != null) {
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, stmt2));
+            } else {
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, nextBlock));
+            }
+            virtualReg++;
+            curBasicBlock = basicBlock;
+            curFunction.addBasicBlock(curBasicBlock);
+            return generateLAndExp(children.get(2), stmt2, nextBlock);
+        } else {
+            return generateLAndExp(children.get(0), stmt2, nextBlock);
+        }
+    }
+    
+    public Value generateLAndExp(SyntaxNode node, BasicBlock stmt2, BasicBlock nextBlock) { //短路求值，在这一步进行比较操作，返回的一定是一个ICmpInstr
+        /*
+         *  LAndExp → EqExp | LAndExp '&&' EqExp
+         */
+        ArrayList<SyntaxNode> children = node.getChildren();
+        if (children.size() > 1) {
+            Value operand1 = generateLAndExp(children.get(0), stmt2, nextBlock);
+            BasicBlock basicBlock = new BasicBlock(null, "%" + virtualReg); //遇到&&需要创块，短路求值的，看需要是否跳转到下一个求值
+            if (stmt2 != null) { //有else语句
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, stmt2));
+            } else { //无else语句直接跳转到if语句后的那个语句块
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, nextBlock));
+            }
+            virtualReg++;
+            curBasicBlock = basicBlock; //切换到&&后的这个表达式对应的block
+            curFunction.addBasicBlock(curBasicBlock); //切换到短路求值的下一个基本块
+            Value operand2 = generateEqExp(children.get(2)); //得到iCmpInstr,icmp后一定紧跟有条件跳转
+            if (!(operand2.getType() instanceof BoolType)) {
+                ICmpInstr iCmpInstr = new ICmpInstr(operand2.getType(), "%" + virtualReg, operand2, new Value(new Integer32Type(), "0"), "ne");
+                curBasicBlock.addInstruction(iCmpInstr);
+                virtualReg++;
+                return iCmpInstr;
+            }
+            return operand2;
+        } else { //与0进行判断
+            Value operand = generateEqExp(node.getChildren().get(0)); //要么是一个数值，要么是一个关系表达式已经cmp过了
+            if (!(operand.getType() instanceof BoolType)) { //不是一个icmpInstr，比如是一个变量c，需要与0进行cmp
+                ICmpInstr iCmpInstr = new ICmpInstr(operand.getType(), "%" + virtualReg, operand, new Value(new Integer32Type(), "0"), "ne");
+                curBasicBlock.addInstruction(iCmpInstr);
+                virtualReg++;
+                return iCmpInstr;
+            }
+            return operand; //比较过了，它本身是一个iCmpInstr
+        }
+    }
+    
+    public Value generateEqExp(SyntaxNode node) {
+        /*
+         * EqExp → RelExp | EqExp ('==' | '!=') RelExp
+         */
+        ArrayList<SyntaxNode> children = node.getChildren();
+        if (children.size() > 1) {
+            Value operand1 = generateEqExp(children.get(0)); //EqExp生成指令，得出operand1
+            Value operand2 = generateRelExp(children.get(2)); //RelExp右边生成指令，得出operand2
+            String op = children.get(1).getName();
+            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
+                virtualReg++;
+            }
+            if (operand2.getType() instanceof Integer8Type) {
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                operand2 = new Value(new Integer32Type(), "%" + virtualReg);
+                virtualReg++;
+            }
+            ICmpInstr iCmpInstr = new ICmpInstr(new Integer32Type(), "%" + virtualReg, operand1, operand2, op);
+            curBasicBlock.addInstruction(iCmpInstr);
+            virtualReg++;
+            return iCmpInstr;
+        } else {
+            return generateRelExp(node.getChildren().get(0));
+        }
+    }
+    
+    public Value generateRelExp(SyntaxNode node) {
+        /*
+         * RelExp → AddExp | RelExp ('<' | '>' | '<=' | '>=') AddExp
+         */
+        ArrayList<SyntaxNode> children = node.getChildren();
+        if (children.size() > 1) {
+            Value operand1 = generateRelExp(children.get(0)); //RelExp生成指令，得出operand1
+            Value operand2 = generateAddExp(children.get(2)); //AddExp右边生成指令，得出operand2
+            String op = children.get(1).getName();
+            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
+                virtualReg++;
+            }
+            if (operand2.getType() instanceof Integer8Type) {
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                operand2 = new Value(new Integer32Type(), "%" + virtualReg);
+                virtualReg++;
+            }
+            ICmpInstr iCmpInstr = new ICmpInstr(new Integer32Type(), "%" + virtualReg, operand1, operand2, op);
+            curBasicBlock.addInstruction(iCmpInstr);
+            virtualReg++;
+            return iCmpInstr; //运算的结果保存在virtualReg，由virtualReg参与后续的Instr
+        } else {
+            return generateAddExp(node.getChildren().get(0));
         }
     }
     

@@ -21,10 +21,13 @@ public class Function extends Value {
     }
     
     public void addBasicBlock(BasicBlock basicBlock) {
+        if (basicBlocks.isEmpty()) {
+            basicBlock.setFirstBlock(true);
+        }
         basicBlocks.add(basicBlock);
     }
     
-    public ArrayList<Param> getParams(){
+    public ArrayList<Param> getParams() {
         return params;
     }
     
