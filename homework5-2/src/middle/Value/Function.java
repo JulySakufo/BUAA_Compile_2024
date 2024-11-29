@@ -35,7 +35,7 @@ public class Function extends Value {
     }
     
     public boolean isLastInstrReturnVoid() {
-        Instr instr = basicBlocks.get(basicBlocks.size() - 2).getLastInstr();
+        Instr instr = basicBlocks.get(basicBlocks.size() - 1).getLastInstr();
         return instr instanceof ReturnInstr && instr.getType() instanceof VoidType;
     }
     
