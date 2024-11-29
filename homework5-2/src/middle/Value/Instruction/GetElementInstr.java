@@ -33,23 +33,23 @@ public class GetElementInstr extends Instr {
     
     @Override
     public String toString() {
-        if (flag == 0) {  /*TODO 数组的偏移可能全部要改成 i32 0, i32 index或者i64 0, i64 index*/
+        if (flag == 0) {
             if (((ArrayType) type).getElementType() instanceof Integer32Type) {
                 return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i32 0, i32 " + index;
             } else {
-                return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i8 0, i8 " + index;
+                return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i32 0, i32 " + index;
             }
         } else if (flag == 1) {
             if (((ArrayType) type).getElementType() instanceof Integer32Type) {
                 return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i32 0, i32 " + operands.get(0).getName();
             } else {
-                return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i8 0, i8 " + operands.get(0).getName();
+                return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i32 0, i32 " + operands.get(0).getName();
             }
         } else {
             if (type instanceof Integer32Type) {
                 return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i32 " + operands.get(0).getName();
             } else {
-                return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i8 " + operands.get(0).getName();
+                return name + " = getelementptr " + type + ", " + type + "* " + lastName + ", i32 " + operands.get(0).getName();
             }
         }
     }
