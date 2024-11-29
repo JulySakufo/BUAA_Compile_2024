@@ -431,7 +431,7 @@ public class IRGenerator {
                 generateBlockItem(child);
             }
         }
-        if (!curFunction.isLastInstrReturnVoid() && curFuncType.equals("void")) {
+        if (!curFunction.isLastInstrReturnVoid() && curFuncType.equals("void") && isFuncDef) {
             curBasicBlock.addInstruction(new ReturnInstr(new VoidType()));
         }
 //        if (!curBasicBlock.hasReturnInstr() && isFuncDef && curFuncType.equals("void")) { //是函数的block并且该block没有return指令
