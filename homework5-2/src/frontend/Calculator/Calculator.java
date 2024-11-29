@@ -50,7 +50,7 @@ public class Calculator {
             if (opNode.getChildren().get(0).getName().equals("+")) {
                 return calUnaryExp(node.getChildren().get(1), stack);
             } else if (opNode.getChildren().get(0).getName().equals("-")) {
-                return calUnaryExp(node.getChildren().get(1), stack);
+                return -calUnaryExp(node.getChildren().get(1), stack);
             } else { // op 为 !
                 return calUnaryExp(node.getChildren().get(1), stack) == 0 ? 1 : 0;
             }
