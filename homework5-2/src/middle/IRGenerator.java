@@ -803,12 +803,12 @@ public class IRGenerator {
             Value operand1 = generateAddExp(children.get(0)); //AddExp生成指令，得出operand1
             Value operand2 = generateMulExp(children.get(2)); //MulExp右边生成指令，得出operand2
             String op = children.get(1).getName();
-            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+            if (!(operand1.getType() instanceof Integer32Type)) { //如果是i8就扩展
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
-            if (operand2.getType() instanceof Integer8Type) {
+            if (!(operand2.getType() instanceof Integer32Type)) {
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
@@ -827,12 +827,12 @@ public class IRGenerator {
             Value operand1 = generateMulExp(children.get(0));
             Value operand2 = generateUnaryExp(children.get(2));
             String op = children.get(1).getName();
-            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+            if (!(operand1.getType() instanceof Integer32Type)) { //如果是i8就扩展
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
-            if (operand2.getType() instanceof Integer8Type) {
+            if (!(operand2.getType() instanceof Integer32Type)) {
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
@@ -991,12 +991,12 @@ public class IRGenerator {
             Value operand1 = generateEqExp(children.get(0)); //EqExp生成指令，得出operand1
             Value operand2 = generateRelExp(children.get(2)); //RelExp右边生成指令，得出operand2
             String op = children.get(1).getName();
-            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+            if (!(operand1.getType() instanceof Integer32Type)) { //如果是i8就扩展
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
-            if (operand2.getType() instanceof Integer8Type) {
+            if (!(operand2.getType() instanceof Integer32Type)) {
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
@@ -1019,12 +1019,12 @@ public class IRGenerator {
             Value operand1 = generateRelExp(children.get(0)); //RelExp生成指令，得出operand1
             Value operand2 = generateAddExp(children.get(2)); //AddExp右边生成指令，得出operand2
             String op = children.get(1).getName();
-            if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
+            if (!(operand1.getType() instanceof Integer32Type)) { //如果是i8就扩展
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
-            if (operand2.getType() instanceof Integer8Type) {
+            if (!(operand2.getType() instanceof Integer32Type)) {
                 curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
