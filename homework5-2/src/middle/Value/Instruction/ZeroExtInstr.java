@@ -11,6 +11,6 @@ public class ZeroExtInstr extends Instr {
     
     @Override
     public String toString() {
-        return name + " = zext i8 " + operands.get(0).getName() + " to i32";
+        return name + " = zext " + type + " "  + operands.get(0).getName() + " to i32";
     }
 }
