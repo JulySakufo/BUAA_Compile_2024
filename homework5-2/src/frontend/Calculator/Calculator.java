@@ -108,6 +108,20 @@ public class Calculator {
                     return '\"';
                 case '\'':
                     return '\'';
+                case 'a':
+                    return 7;
+                case 'b':
+                    return 8;
+                case 't':
+                    return 9;
+                case 'n':
+                    return 10;
+                case 'v':
+                    return 11;
+                case 'f':
+                    return 12;
+                case '0':
+                    return 0;
                 default:
                     return '\\';
             }

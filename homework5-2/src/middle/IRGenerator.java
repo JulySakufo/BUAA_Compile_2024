@@ -901,16 +901,38 @@ public class IRGenerator {
             case "Number":
                 return new Value(new Integer32Type(), node.getChildren().get(0).getChildren().get(0).getName());
             case "Character":
-                //return new Value(new Integer8Type(), node.getChildren().get(0).getChildren().get(0).getName());
                 String charConst = node.getChildren().get(0).getChildren().get(0).getName();
                 charConst = charConst.substring(1, charConst.length() - 1);
                 if (charConst.charAt(0) == '\\') { //考虑转义字符
                     switch (charConst.charAt(1)) {
                         case '\"':
                             charConst = String.valueOf(34);
+                            break;
                         case '\'':
                             charConst = String.valueOf(39);
-                        default:
+                            break;
+                        case 'a':
+                            charConst = String.valueOf(7);
+                            break;
+                        case 'b':
+                            charConst = String.valueOf(8);
+                            break;
+                        case 't':
+                            charConst = String.valueOf(9);
+                            break;
+                        case 'n':
+                            charConst = String.valueOf(10);
+                            break;
+                        case 'v':
+                            charConst = String.valueOf(11);
+                            break;
+                        case 'f':
+                            charConst = String.valueOf(12);
+                            break;
+                        case '0':
+                            charConst = String.valueOf(0);
+                            break;
+                        default: // \\
                             charConst = String.valueOf(92);
                     }
                 } else {
