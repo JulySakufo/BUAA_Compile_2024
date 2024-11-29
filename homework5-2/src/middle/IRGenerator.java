@@ -561,29 +561,29 @@ public class IRGenerator {
     
     public void generateIf(SyntaxNode node) { //node是stmt
         ArrayList<SyntaxNode> children = node.getChildren();
-        BasicBlock stmt1 = new BasicBlock(null, null);
-        BasicBlock stmt2 = new BasicBlock(null, null);
+        BasicBlock trueBlock = new BasicBlock(null, null);
+        BasicBlock falseBlock = new BasicBlock(null, null);
         BasicBlock nextBlock = new BasicBlock(null, null);
         
         if (children.size() > 5) { //有else语句
             /*TODO 下面这个式子真的对吗*/
-            Value operand = generateCond(children.get(2), stmt2, nextBlock); //分析出来的寄存器应该是个ICmpInstr
-            curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), stmt1, stmt2));
+            Value operand = generateCond(children.get(2), trueBlock, falseBlock, nextBlock); //分析出来的寄存器应该是个ICmpInstr
+            curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), trueBlock, falseBlock));
         } else { //无else语句
             /*TODO 下面这个式子真的对吗*/
-            Value operand = generateCond(children.get(2), null, nextBlock); //分析出来的寄存器应该是个ICmpInstr
-            curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), stmt1, nextBlock));
+            Value operand = generateCond(children.get(2), trueBlock, null, nextBlock); //分析出来的寄存器应该是个ICmpInstr
+            curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), trueBlock, nextBlock));
         }
-        stmt1.setName("%" + virtualReg);
-        curBasicBlock = stmt1;
+        trueBlock.setName("%" + virtualReg);
+        curBasicBlock = trueBlock;
         virtualReg++;
         curFunction.addBasicBlock(curBasicBlock);
         generateStmt(children.get(4)); //解析if块语句
         if (children.size() > 5) { //有else语句
-            stmt2.setName("%" + virtualReg);
+            falseBlock.setName("%" + virtualReg);
             virtualReg++;
             curBasicBlock.addInstruction(new BranchInstr(nextBlock)); //if结束后跳转到if-else语句结束的block
-            curBasicBlock = stmt2; //即将进入else进行解析
+            curBasicBlock = falseBlock; //即将进入else进行解析
             curFunction.addBasicBlock(curBasicBlock);
             generateStmt(children.get(6)); //解析else块语句
         }
@@ -594,8 +594,8 @@ public class IRGenerator {
         curFunction.addBasicBlock(curBasicBlock);
     }
     
-    public Value generateCond(SyntaxNode node, BasicBlock stmt2, BasicBlock nextBlock) {
-        return generateLOrExp(node.getChildren().get(0), stmt2, nextBlock);
+    public Value generateCond(SyntaxNode node, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock nextBlock) {
+        return generateLOrExp(node.getChildren().get(0), trueBlock, falseBlock, nextBlock);
     }
     
     public void generateBreak(SyntaxNode node) {
@@ -636,7 +636,7 @@ public class IRGenerator {
             if (child.getName().equals("ForStmt")) {
                 generateForStmt(child);
             } else if (child.getName().equals("Cond")) {
-                operand = generateCond(child, null, nextBlock);
+                operand = generateCond(child, stmtBlock, null, nextBlock);
             } else if (child.getName().equals(";")) {
                 if (isFirstSemicn) { //第一次遇到分号，第一个forStmt分析完了，在forStmt的block里设置cond的块号
                     isFirstSemicn = false;
@@ -924,38 +924,38 @@ public class IRGenerator {
         }
     }
     
-    public Value generateLOrExp(SyntaxNode node, BasicBlock stmt2, BasicBlock nextBlock) { //短路求值
+    public Value generateLOrExp(SyntaxNode node, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock nextBlock) { //短路求值
         /*
          * LOrExp → LAndExp | LOrExp '||' LAndExp
          */
         ArrayList<SyntaxNode> children = node.getChildren();
         if (children.size() > 1) {
-            Value operand1 = generateLOrExp(children.get(0), stmt2, nextBlock);
+            Value operand1 = generateLOrExp(children.get(0), trueBlock, falseBlock, nextBlock);
             BasicBlock basicBlock = new BasicBlock(null, "%" + virtualReg); //遇到||需要创块
-            if (stmt2 != null) {
-                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, stmt2));
+            if (falseBlock != null) {
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), trueBlock, basicBlock));
             } else {
-                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, nextBlock));
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), trueBlock, basicBlock));
             }
             virtualReg++;
             curBasicBlock = basicBlock;
             curFunction.addBasicBlock(curBasicBlock);
-            return generateLAndExp(children.get(2), stmt2, nextBlock);
+            return generateLAndExp(children.get(2), trueBlock, falseBlock, nextBlock);
         } else {
-            return generateLAndExp(children.get(0), stmt2, nextBlock);
+            return generateLAndExp(children.get(0), trueBlock, falseBlock, nextBlock);
         }
     }
     
-    public Value generateLAndExp(SyntaxNode node, BasicBlock stmt2, BasicBlock nextBlock) { //短路求值，在这一步进行比较操作，返回的一定是一个ICmpInstr
+    public Value generateLAndExp(SyntaxNode node, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock nextBlock) { //短路求值，在这一步进行比较操作，返回的一定是一个ICmpInstr
         /*
          *  LAndExp → EqExp | LAndExp '&&' EqExp
          */
         ArrayList<SyntaxNode> children = node.getChildren();
         if (children.size() > 1) {
-            Value operand1 = generateLAndExp(children.get(0), stmt2, nextBlock);
+            Value operand1 = generateLAndExp(children.get(0), trueBlock, falseBlock, nextBlock);
             BasicBlock basicBlock = new BasicBlock(null, "%" + virtualReg); //遇到&&需要创块，短路求值的，看需要是否跳转到下一个求值
-            if (stmt2 != null) { //有else语句
-                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, stmt2));
+            if (falseBlock != null) { //有else语句
+                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, falseBlock));
             } else { //无else语句直接跳转到if语句后的那个语句块
                 curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), basicBlock, nextBlock));
             }
