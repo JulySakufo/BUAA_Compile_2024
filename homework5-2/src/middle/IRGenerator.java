@@ -537,7 +537,7 @@ public class IRGenerator {
                 funcRParams.add(operands.get(operandIndex));
                 operandIndex++;
                 if (funcRParams.get(0).getType() instanceof Integer8Type) { //putint,putch都是i32,需要扩展
-                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, funcRParams.get(0),funcRParams.get(0).getType());
+                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, funcRParams.get(0), funcRParams.get(0).getType());
                     curBasicBlock.addInstruction(zeroExtInstr);
                     virtualReg++;
                     funcRParams.clear();
@@ -927,11 +927,15 @@ public class IRGenerator {
     public Value generateLOrExp(SyntaxNode node, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock nextBlock) { //短路求值
         /*
          * LOrExp → LAndExp | LOrExp '||' LAndExp
+         * trueBlock代表这个表达式为真的时候去往的块
+         * falseBlock代表这个表达式为假的时候且有else去往的块
+         * nextBlock代表这个表达式为假且无else去往的块
          */
         ArrayList<SyntaxNode> children = node.getChildren();
         if (children.size() > 1) {
-            Value operand1 = generateLOrExp(children.get(0), trueBlock, falseBlock, nextBlock);
-            BasicBlock basicBlock = new BasicBlock(null, "%" + virtualReg); //遇到||需要创块
+            BasicBlock basicBlock = new BasicBlock(null, null); //遇到||需要创块，这个块是LAndExp所在的块号
+            Value operand1 = generateLOrExp(children.get(0), trueBlock, basicBlock, nextBlock); //显然当LOrExp为假的时候去往的块应该是||后面那个块
+            basicBlock.setName("%" + virtualReg);
             if (falseBlock != null) {
                 curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand1.getName(), trueBlock, basicBlock));
             } else {
