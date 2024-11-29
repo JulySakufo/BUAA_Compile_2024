@@ -595,12 +595,18 @@ public class IRGenerator {
         BasicBlock nextBlock = forLoopStack.peek().get(1);
         BranchInstr branchInstr = new BranchInstr(nextBlock);
         curBasicBlock.addInstruction(branchInstr);
+        curBasicBlock = new BasicBlock(null, "%" + virtualReg);
+        curFunction.addBasicBlock(curBasicBlock);
+        virtualReg++;
     }
     
     public void generateContinue(SyntaxNode node) {
         BasicBlock forStmtBlock = forLoopStack.peek().get(0);
         BranchInstr branchInstr = new BranchInstr(forStmtBlock);
         curBasicBlock.addInstruction(branchInstr);
+        curBasicBlock = new BasicBlock(null, "%" + virtualReg);
+        curFunction.addBasicBlock(curBasicBlock);
+        virtualReg++;
     }
     
     public void generateFor(SyntaxNode node) { //node是Stmt
