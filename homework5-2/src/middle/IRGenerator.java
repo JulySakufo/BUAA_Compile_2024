@@ -249,7 +249,7 @@ public class IRGenerator {
                 Value operand = generateExp(node.getChildren().get(0));
                 if (!twoTypeMatch(operand.getType(), getLLVMFunctionType(symbol.getType()))) { //operand是i8,symbol是i32，需要扩展
                     if (getLLVMFunctionType(symbol.getType()) instanceof Integer32Type) {
-                        ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer8Type(), "%" + virtualReg, operand);
+                        ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer8Type(), "%" + virtualReg, operand, operand.getType());
                         curBasicBlock.addInstruction(zeroExtInstr);
                         virtualReg++;
                         operand = zeroExtInstr;
@@ -280,7 +280,7 @@ public class IRGenerator {
                         Value operand = generateExp(child); //得到存储结果的寄存器
                         if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), operand.getType())) { //不匹配则需要截断或扩展
                             if (getLLVMFunctionType(symbol.getType()) instanceof Integer32Type) { //operand是i8，扩展
-                                ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand);
+                                ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand, operand.getType());
                                 curBasicBlock.addInstruction(zeroExtInstr);
                                 operand = zeroExtInstr;
                                 virtualReg++; //指向未使用的寄存器
@@ -487,7 +487,7 @@ public class IRGenerator {
             Value operand = generateExp(node.getChildren().get(1));
             if (curFuncType.equals("int")) { //int型函数
                 if (operand.getType() instanceof Integer8Type) { //扩展
-                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand);
+                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand, operand.getType());
                     operand = zeroExtInstr; //截断后的寄存器才是对的
                     virtualReg++;
                     curBasicBlock.addInstruction(zeroExtInstr);
@@ -537,7 +537,7 @@ public class IRGenerator {
                 funcRParams.add(operands.get(operandIndex));
                 operandIndex++;
                 if (funcRParams.get(0).getType() instanceof Integer8Type) { //putint,putch都是i32,需要扩展
-                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, funcRParams.get(0));
+                    ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, funcRParams.get(0),funcRParams.get(0).getType());
                     curBasicBlock.addInstruction(zeroExtInstr);
                     virtualReg++;
                     funcRParams.clear();
@@ -734,7 +734,7 @@ public class IRGenerator {
                     Value operand = generateExp(node.getChildren().get(2)); //拿的是exp运算出来的储存结果的寄存器%virtualReg或者纯数字
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), operand.getType())) { //二者类型不匹配，截断或扩展
                         if (getLLVMFunctionType(symbol.getType()) instanceof Integer32Type) { //8->32,zext
-                            ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer8Type(), "%" + virtualReg, operand);
+                            ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer8Type(), "%" + virtualReg, operand, operand.getType());
                             curBasicBlock.addInstruction(zeroExtInstr);
                             operand = zeroExtInstr; //指向新寄存器
                         } else { //32->8,trunc
@@ -804,12 +804,12 @@ public class IRGenerator {
             Value operand2 = generateMulExp(children.get(2)); //MulExp右边生成指令，得出operand2
             String op = children.get(1).getName();
             if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
             if (operand2.getType() instanceof Integer8Type) {
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
             }
@@ -828,12 +828,12 @@ public class IRGenerator {
             Value operand2 = generateUnaryExp(children.get(2));
             String op = children.get(1).getName();
             if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
             if (operand2.getType() instanceof Integer8Type) {
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
             }
@@ -992,12 +992,12 @@ public class IRGenerator {
             Value operand2 = generateRelExp(children.get(2)); //RelExp右边生成指令，得出operand2
             String op = children.get(1).getName();
             if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
             if (operand2.getType() instanceof Integer8Type) {
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
             }
@@ -1020,12 +1020,12 @@ public class IRGenerator {
             Value operand2 = generateAddExp(children.get(2)); //AddExp右边生成指令，得出operand2
             String op = children.get(1).getName();
             if (operand1.getType() instanceof Integer8Type) { //如果是i8就扩展
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand1, operand1.getType()));
                 operand1 = new Value(new Integer32Type(), "%" + virtualReg); //后续运算的寄存器是扩展后的寄存器
                 virtualReg++;
             }
             if (operand2.getType() instanceof Integer8Type) {
-                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2));
+                curBasicBlock.addInstruction(new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand2, operand2.getType()));
                 operand2 = new Value(new Integer32Type(), "%" + virtualReg);
                 virtualReg++;
             }
