@@ -1,7 +1,10 @@
 package middle.Value;
 
 import middle.Type.Type;
+import middle.Type.VoidType;
 import middle.Value.Instruction.AllocaInstr;
+import middle.Value.Instruction.Instr;
+import middle.Value.Instruction.ReturnInstr;
 import middle.Value.Instruction.StoreInstr;
 
 import java.util.ArrayList;
@@ -29,6 +32,11 @@ public class Function extends Value {
     
     public ArrayList<Param> getParams() {
         return params;
+    }
+    
+    public boolean isLastInstrReturnVoid() {
+        Instr instr = basicBlocks.get(basicBlocks.size() - 2).getLastInstr();
+        return instr instanceof ReturnInstr && instr.getType() instanceof VoidType;
     }
     
     @Override

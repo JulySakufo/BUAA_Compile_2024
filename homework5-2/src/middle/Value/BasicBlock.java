@@ -28,6 +28,13 @@ public class BasicBlock extends Value {
         }
     }
     
+    public Instr getLastInstr() {
+        if (instructions.isEmpty()) {
+            return null;
+        }
+        return instructions.get(instructions.size() - 1);
+    }
+    
     public void setFirstBlock(boolean isFirstBlock) { //是第一个块，不用输出编号
         this.isFirstBlock = isFirstBlock;
     }
@@ -39,7 +46,7 @@ public class BasicBlock extends Value {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (!isFirstBlock) { //不是第一个块，输出当前的编号,name就是块的编号
+        if (!isFirstBlock && !instructions.isEmpty()) { //不是第一个块，输出当前的编号,name就是块的编号
             sb.append(name.substring(1)).append(":").append("\n");
         }
         for (Instr instruction : instructions) {

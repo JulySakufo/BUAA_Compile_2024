@@ -431,9 +431,13 @@ public class IRGenerator {
                 generateBlockItem(child);
             }
         }
-        if (!curBasicBlock.hasReturnInstr() && isFuncDef) { //是函数的block并且该block没有return指令
-            curBasicBlock.addInstruction(new ReturnInstr(new VoidType())); //加一条ret void指令
+        if (!curFunction.isLastInstrReturnVoid() && curFuncType.equals("void")) {
+            curBasicBlock.addInstruction(new ReturnInstr(new VoidType()));
         }
+//        if (!curBasicBlock.hasReturnInstr() && isFuncDef && curFuncType.equals("void")) { //是函数的block并且该block没有return指令
+//            curBasicBlock.addInstruction(new ReturnInstr(new VoidType())); //加一条ret void指令
+//        }
+        /*TODO 这里不知道要不要切块*/
         stack.pop();
     }
     
@@ -501,6 +505,9 @@ public class IRGenerator {
         } else { //无返回值
             curBasicBlock.addInstruction(new ReturnInstr(new VoidType()));
         }
+        curBasicBlock = new BasicBlock(null, "%" + virtualReg); //return也要切块
+        curFunction.addBasicBlock(curBasicBlock);
+        virtualReg++;
     }
     
     public void generatePrintf(SyntaxNode node) {
