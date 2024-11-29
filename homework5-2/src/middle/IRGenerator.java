@@ -617,40 +617,48 @@ public class IRGenerator {
         BasicBlock nextBlock = new BasicBlock(null, null); //对应for循环结束后的块编号
         arrayList.add(forStmtBlock);
         arrayList.add(nextBlock); //去指引stmt的br
+        boolean isFirstSemicn = true; //由分号指引br
+        Value operand = null;
         for (SyntaxNode child : children) {
-            if (child.getName().equals("ForStmt")) { //一共两次
-                if (isFirstForStmt) {
-                    generateForStmt(child);
-                    isFirstForStmt = false;
+            if (child.getName().equals("ForStmt")) {
+                generateForStmt(child);
+            } else if (child.getName().equals("Cond")) {
+                operand = generateCond(child, null, nextBlock);
+            } else if (child.getName().equals(";")) {
+                if (isFirstSemicn) { //第一次遇到分号，第一个forStmt分析完了，在forStmt的block里设置cond的块号
+                    isFirstSemicn = false;
                     BranchInstr branchInstr = new BranchInstr(condBlock);
                     condBlock.setName("%" + virtualReg);
                     virtualReg++;
                     curBasicBlock.addInstruction(branchInstr);
-                    curBasicBlock = condBlock;
+                    curBasicBlock = condBlock; //无条件跳转到cond对应的block
                     curFunction.addBasicBlock(curBasicBlock);
-                } else {
-                    generateForStmt(child);
-                    BranchInstr branchInstr = new BranchInstr(condBlock);
-                    nextBlock.setName("%" + virtualReg);
+                } else { //第二个分号处理完了
+                    BranchInstr branchInstr = null;
+                    if (operand != null) { //for语句里有cond
+                        branchInstr = new BranchInstr(new BoolType(), operand.getName(), stmtBlock, nextBlock);
+                    } else {
+                        branchInstr = new BranchInstr(stmtBlock);
+                    }
+                    stmtBlock.setName("%" + virtualReg);
                     virtualReg++;
                     curBasicBlock.addInstruction(branchInstr);
-                    curBasicBlock = nextBlock;
+                    curBasicBlock = stmtBlock;
                     curFunction.addBasicBlock(curBasicBlock);
+                    generateStmt(node.getLastChild()); //分析stmt
+                    forStmtBlock.setName("%" + virtualReg);
+                    virtualReg++;
+                    curBasicBlock.addInstruction(new BranchInstr(forStmtBlock));
+                    curBasicBlock = forStmtBlock;
+                    curFunction.addBasicBlock(forStmtBlock);
                 }
-            } else if (child.getName().equals("Cond")) {
-                Value operand = generateCond(child, null, nextBlock);
-                curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), stmtBlock, nextBlock));
-                stmtBlock.setName("%" + virtualReg);
-                curBasicBlock = stmtBlock;
+            } else if (child.getName().equals(")")) { //第二个forStmt分析完了
+                BranchInstr branchInstr = new BranchInstr(condBlock);
+                nextBlock.setName("%" + virtualReg);
                 virtualReg++;
+                curBasicBlock.addInstruction(branchInstr);
+                curBasicBlock = nextBlock; //切块，到nextBlock
                 curFunction.addBasicBlock(curBasicBlock);
-                /*TODO break or continue的处理 */
-                generateStmt(node.getLastChild());
-                forStmtBlock.setName("%" + virtualReg);
-                virtualReg++;
-                curBasicBlock.addInstruction(new BranchInstr(forStmtBlock));
-                curBasicBlock = forStmtBlock;
-                curFunction.addBasicBlock(forStmtBlock);
             }
         }
         forLoopStack.pop(); //弹出
