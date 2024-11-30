@@ -460,10 +460,6 @@ public class IRGenerator {
         if (!curFunction.isLastInstrReturnVoid() && curFuncType.equals("void") && isFuncDef) {
             curBasicBlock.addInstruction(new ReturnInstr(new VoidType()));
         }
-//        if (!curBasicBlock.hasReturnInstr() && isFuncDef && curFuncType.equals("void")) { //是函数的block并且该block没有return指令
-//            curBasicBlock.addInstruction(new ReturnInstr(new VoidType())); //加一条ret void指令
-//        }
-        /*TODO 这里不知道要不要切块*/
         stack.pop();
     }
     
@@ -592,11 +588,9 @@ public class IRGenerator {
         BasicBlock nextBlock = new BasicBlock(null, null);
         
         if (children.size() > 5) { //有else语句
-            /*TODO 下面这个式子真的对吗*/
             Value operand = generateCond(children.get(2), trueBlock, falseBlock, nextBlock); //分析出来的寄存器应该是个ICmpInstr
             curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), trueBlock, falseBlock));
         } else { //无else语句
-            /*TODO 下面这个式子真的对吗*/
             Value operand = generateCond(children.get(2), trueBlock, null, nextBlock); //分析出来的寄存器应该是个ICmpInstr
             curBasicBlock.addInstruction(new BranchInstr(new BoolType(), operand.getName(), trueBlock, nextBlock));
         }
@@ -801,7 +795,6 @@ public class IRGenerator {
                     }
                 }
             } else { //ident[Exp]
-                /*TODO getelementType的方式有问题 */
                 Value operand = generateExp(node.getChildren().get(2)); //得到exp的寄存器
                 if (!curFunction.getName().equals("main") && !symbol.getIsGlobal()) { //相对位移，防止调用的是参数的数组
                     GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, operand, symbolReg, 2);
@@ -891,7 +884,7 @@ public class IRGenerator {
                     curBasicBlock.addInstruction(binaryInstr);
                     return binaryInstr; //将二目运算的结果的寄存器返回去用于store
                 case "!":
-                    /*TODO !仅出现在条件表达式 */
+                    /* !仅出现在条件表达式 */
                     Value operand2 = generateUnaryExp(node.getChildren().get(1));
                     ICmpInstr iCmpInstr = new ICmpInstr(operand2.getType(), "%" + virtualReg, operand2, new Value(new Integer32Type(), "0"), "eq");
                     virtualReg++;
