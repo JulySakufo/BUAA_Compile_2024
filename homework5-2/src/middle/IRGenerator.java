@@ -215,7 +215,7 @@ public class IRGenerator {
                         int result = 0;
                         if (string.charAt(i) == '\\') { //考虑转义
                             i++;
-                            result = '\n'; //转义字符中只会出现 '\n'
+                            result = dealWithEscapeCharacter(string.charAt(i));
                         } else {
                             result = string.charAt(i);
                         }
@@ -227,6 +227,19 @@ public class IRGenerator {
                             index++;
                         }
                     }
+                }
+            }
+            for (int i = index; i < arrayLength; i++) {
+                /*
+                 * 对于任何有初始值的字符数组，编译器应该在初始化时将未使用的部分置0
+                 * 此处对局部常量字符数组进行了处理
+                 */
+                if (curFunction != null && symbol.getType().equals("char")) { //局部常量数组，给未初始化的部分赋0处理
+                    values.add(0);
+                    curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
+                    curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, 0));
+                    virtualReg++;
+                    index++;
                 }
             }
             for (int i = values.size(); i < arrayLength; i++) { //补足未初始化的元素
@@ -301,7 +314,7 @@ public class IRGenerator {
                         int result = 0;
                         if (string.charAt(i) == '\\') { //考虑转义
                             i++;
-                            result = '\n'; //转义字符中只会出现 '\n'
+                            result = dealWithEscapeCharacter(string.charAt(i));
                         } else {
                             result = string.charAt(i);
                         }
@@ -315,7 +328,20 @@ public class IRGenerator {
                     }
                 }
             }
-            if (symbol.getIsGlobal()) { //全局变量才需要补足初值，局部变量不需要
+            for (int i = index; i < arrayLength; i++) {
+                /*
+                 * 对于任何有初始值的字符数组，编译器应该在初始化时将未使用的部分置0
+                 * 此处对局部变量字符数组进行了处理
+                 */
+                if (curFunction != null && symbol.getType().equals("char")) { //局部变量数组，给未初始化的部分赋0处理
+                    values.add(0);
+                    curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
+                    curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, 0));
+                    virtualReg++;
+                    index++;
+                }
+            }
+            if (symbol.getIsGlobal()) {
                 for (int i = values.size(); i < arrayLength; i++) { //补足未初始化的元素
                     values.add(0);
                 }
@@ -904,37 +930,7 @@ public class IRGenerator {
                 String charConst = node.getChildren().get(0).getChildren().get(0).getName();
                 charConst = charConst.substring(1, charConst.length() - 1);
                 if (charConst.charAt(0) == '\\') { //考虑转义字符
-                    switch (charConst.charAt(1)) {
-                        case '\"':
-                            charConst = String.valueOf(34);
-                            break;
-                        case '\'':
-                            charConst = String.valueOf(39);
-                            break;
-                        case 'a':
-                            charConst = String.valueOf(7);
-                            break;
-                        case 'b':
-                            charConst = String.valueOf(8);
-                            break;
-                        case 't':
-                            charConst = String.valueOf(9);
-                            break;
-                        case 'n':
-                            charConst = String.valueOf(10);
-                            break;
-                        case 'v':
-                            charConst = String.valueOf(11);
-                            break;
-                        case 'f':
-                            charConst = String.valueOf(12);
-                            break;
-                        case '0':
-                            charConst = String.valueOf(0);
-                            break;
-                        default: // \\
-                            charConst = String.valueOf(92);
-                    }
+                    charConst = String.valueOf(dealWithEscapeCharacter(charConst.charAt(1)));
                 } else {
                     charConst = String.valueOf((int) charConst.charAt(0));
                 }
@@ -1116,5 +1112,30 @@ public class IRGenerator {
     
     public boolean twoTypeMatch(Type type1, Type type2) { //两个类型是否是一种类型
         return type1.toString().equals(type2.toString());
+    }
+    
+    public int dealWithEscapeCharacter(char ch) { //转义字符的处理
+        switch (ch) {
+            case '\"':
+                return 34;
+            case '\'':
+                return 39;
+            case 'a':
+                return 7;
+            case 'b':
+                return 8;
+            case 't':
+                return 9;
+            case 'n':
+                return 10;
+            case 'v':
+                return 11;
+            case 'f':
+                return 12;
+            case '0':
+                return 0;
+            default: // \\
+                return 92;
+        }
     }
 }
