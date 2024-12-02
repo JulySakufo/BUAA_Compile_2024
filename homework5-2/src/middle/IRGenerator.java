@@ -52,7 +52,7 @@ public class IRGenerator {
                 generateMainFuncDef(child);
             }
         }
-        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework5-2\\src\\llvm_ir.txt"))) {
+        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("llvm_ir.txt"))) {
             stdout.write(module.toString());
         } catch (Exception ignored) {
         
@@ -444,7 +444,7 @@ public class IRGenerator {
                 Param param = params.get(i);
                 if ((param.getType() instanceof Integer32Type) || (param.getType() instanceof Integer8Type)) { //数组不需要重新分配
                     curBasicBlock.addInstruction(new AllocaInstr(param.getType(), "%" + virtualReg));
-                    curBasicBlock.addInstruction(new StoreInstr(param.getType(), param.getName(), "%" + virtualReg));
+                    curBasicBlock.addInstruction(new StoreInstr(param.getType(), param, "%" + virtualReg));
                     SymbolTable symbolTable = stack.peek();
                     symbolTable.getSymbol(i).setVirtualReg("%" + virtualReg); //函数参数重新分配寄存器
                     virtualReg++;
@@ -733,9 +733,9 @@ public class IRGenerator {
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) {
                         virtualReg++;
                         curBasicBlock.addInstruction(new TruncInstr(virtualReg));
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     } else {
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(),  new Value(new Type(), "%" + virtualReg), symbolReg));
                     }
                     virtualReg++;
                     break;
@@ -744,9 +744,9 @@ public class IRGenerator {
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) { //char = getchar()，getchar返回值是i32
                         virtualReg++;
                         curBasicBlock.addInstruction(new TruncInstr(virtualReg));
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(),  new Value(new Type(), "%" + virtualReg), symbolReg));
                     } else { //i32对i32
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(),  new Value(new Type(), "%" + virtualReg), symbolReg));
                     }
                     virtualReg++;
                     break;
