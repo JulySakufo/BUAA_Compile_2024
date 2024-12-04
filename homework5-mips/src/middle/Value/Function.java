@@ -63,4 +63,14 @@ public class Function extends Value {
         return sb.toString();
     }
     
+    @Override
+    public void generateMips() {
+        
+        for (Param param : params) {
+            param.generateMips();
+        }
+        for (BasicBlock basicBlock : basicBlocks) {
+            basicBlock.generateMips();
+        }
+    }
 }

@@ -41,7 +41,7 @@ public class IRGenerator {
         initializeSymbolTable();
     }
     
-    public void generateModule() {
+    public Module generateModule() {
         ArrayList<SyntaxNode> children = root.getChildren();
         for (SyntaxNode child : children) {
             if (child.getName().equals("Decl")) {
@@ -57,6 +57,7 @@ public class IRGenerator {
         } catch (Exception ignored) {
         
         }
+        return module;
     }
     
     public void generateDecl(SyntaxNode node) {
@@ -444,7 +445,7 @@ public class IRGenerator {
                 Param param = params.get(i);
                 if ((param.getType() instanceof Integer32Type) || (param.getType() instanceof Integer8Type)) { //数组不需要重新分配
                     curBasicBlock.addInstruction(new AllocaInstr(param.getType(), "%" + virtualReg));
-                    curBasicBlock.addInstruction(new StoreInstr(param.getType(), param.getName(), "%" + virtualReg));
+                    curBasicBlock.addInstruction(new StoreInstr(param.getType(), param, "%" + virtualReg));
                     SymbolTable symbolTable = stack.peek();
                     symbolTable.getSymbol(i).setVirtualReg("%" + virtualReg); //函数参数重新分配寄存器
                     virtualReg++;
@@ -733,9 +734,9 @@ public class IRGenerator {
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) {
                         virtualReg++;
                         curBasicBlock.addInstruction(new TruncInstr(virtualReg));
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     } else {
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     }
                     virtualReg++;
                     break;
@@ -744,9 +745,9 @@ public class IRGenerator {
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) { //char = getchar()，getchar返回值是i32
                         virtualReg++;
                         curBasicBlock.addInstruction(new TruncInstr(virtualReg));
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     } else { //i32对i32
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), "%" + virtualReg, symbolReg));
+                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     }
                     virtualReg++;
                     break;
@@ -879,7 +880,7 @@ public class IRGenerator {
                     return generateUnaryExp(node.getChildren().get(1));
                 case "-":
                     Value operand1 = generateUnaryExp(node.getChildren().get(1)); //exp得到的寄存器，拿来做二目运算
-                    BinaryInstr binaryInstr = new BinaryInstr(new Integer32Type(), operand1, "-", "%" + virtualReg);
+                    BinaryInstr binaryInstr = new BinaryInstr(new Integer32Type(), new Value(new Integer32Type(), "0"), operand1, "-", "%" + virtualReg);
                     virtualReg++;
                     curBasicBlock.addInstruction(binaryInstr);
                     return binaryInstr; //将二目运算的结果的寄存器返回去用于store

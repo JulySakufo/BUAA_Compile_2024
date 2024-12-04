@@ -18,4 +18,8 @@ public class Value {
     public String getName() {
         return name;
     }
+    
+    public void generateMips() {
+    
+    }
 }

@@ -44,4 +44,14 @@ public class Module extends Value {
         }
         return sb.toString();
     }
+    
+    @Override
+    public void generateMips() {
+        for (GlobalVar globalVar : globalVars) {
+            globalVar.generateMips();
+        }
+        for (Function function : functions) {
+            function.generateMips();
+        }
+    }
 }

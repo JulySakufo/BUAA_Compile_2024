@@ -22,4 +22,8 @@ public class ArrayType extends Type {
     public Type getElementType() {
         return elementType;
     }
+    
+    public int getArrayLength() {
+        return arrayLength;
+    }
 }

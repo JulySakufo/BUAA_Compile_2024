@@ -11,4 +11,9 @@ public class Param extends Value {
     public String toString() {
         return type + " " + name;
     }
+    
+    @Override
+    public void generateMips() {
+        /*TODO*/
+    }
 }

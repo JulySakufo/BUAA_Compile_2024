@@ -1,9 +1,13 @@
 package middle.Value;
 
+import backend.Assembly.Data;
+import backend.MipsGenerator;
 import frontend.SymbolTable.Symbol;
 import middle.Type.Integer32Type;
 import middle.Type.Integer8Type;
 import middle.Type.Type;
+
+import java.util.ArrayList;
 
 public class GlobalVar extends Value {
     private Symbol symbol;
@@ -35,5 +39,20 @@ public class GlobalVar extends Value {
             sb.append("]");
         }
         return sb.toString();
+    }
+    
+    @Override
+    public void generateMips() {
+        String name = symbol.getName();
+        String type = this.type instanceof Integer32Type ? ".word" : ".byte";
+        ArrayList<Integer> values = new ArrayList<>();
+        if (!symbol.getIsArray()) { //如果是常量,values.get(0)是值
+            values.add(symbol.getValue());
+        } else { //如果是数组，对应数组
+            for (int i = 0; i < symbol.getValues().size(); i++) {
+                values.add(symbol.getValue(i));
+            }
+        }
+        MipsGenerator.getMipsGenerator().addData(new Data(name, type, values));
     }
 }

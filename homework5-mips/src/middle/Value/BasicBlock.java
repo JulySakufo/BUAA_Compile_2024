@@ -1,5 +1,7 @@
 package middle.Value;
 
+import backend.Assembly.CommentAsm;
+import backend.MipsGenerator;
 import middle.Type.Type;
 import middle.Value.Instruction.Instr;
 import middle.Value.Instruction.ReturnInstr;
@@ -53,5 +55,14 @@ public class BasicBlock extends Value {
             sb.append("    ").append(instruction).append("\n");
         }
         return sb.toString();
+    }
+    
+    @Override
+    public void generateMips() {
+        for (Instr instr : instructions) {
+            CommentAsm commentAsm = new CommentAsm(instr.toString());
+            MipsGenerator.getMipsGenerator().addAsm(commentAsm);
+            instr.generateMips();
+        }
     }
 }

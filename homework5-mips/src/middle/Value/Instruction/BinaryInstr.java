@@ -1,5 +1,9 @@
 package middle.Value.Instruction;
 
+import backend.Assembly.*;
+import backend.MipsGenerator;
+import backend.Register;
+import backend.RegisterController;
 import middle.Type.Type;
 import middle.Value.Value;
 
@@ -10,12 +14,6 @@ public class BinaryInstr extends Instr {
         super(type, virtualReg);
         operands.add(operand1);
         operands.add(operand2);
-        this.op = op;
-    }
-    
-    public BinaryInstr(Type type, Value operand1, String op, String virtualReg) {
-        super(type, virtualReg);
-        operands.add(operand1);
         this.op = op;
     }
     
@@ -40,11 +38,47 @@ public class BinaryInstr extends Instr {
                 sb.append("srem ");
                 break;
         }
-        if (operands.size() == 2) {
-            sb.append(type).append(" ").append(operands.get(0).getName()).append(", ").append(operands.get(1).getName());
-        } else {
-            sb.append(type).append(" ").append("0 ").append(", ").append(operands.get(0).getName());
-        }
+        sb.append(type).append(" ").append(operands.get(0).getName()).append(", ").append(operands.get(1).getName());
         return sb.toString();
+    }
+    
+    @Override
+    public void generateMips() {
+        RegisterController.getRegisterController().dealAluRAsmRsRt(name, operands);
+        int regOffset = RegisterController.getRegisterController().getValueOffset(name);
+        String asmOp = null;
+        if (op.equals("+") || op.equals("-")) { // + -的运算
+            switch (op) {
+                case "+":
+                    asmOp = "addu";
+                    break;
+                case "-":
+                    asmOp = "subu";
+                    break;
+            }
+            AluRAsm adduAsm = new AluRAsm(Register.T0, Register.T1, Register.T2, asmOp);
+            MipsGenerator.getMipsGenerator().addAsm(adduAsm);
+        } else { // * / %的运算
+            switch (op) {
+                case "*":
+                    asmOp = "mult";
+                    break;
+                case "/":
+                case "%":
+                    asmOp = "div";
+                    break;
+            }
+            MulDivAsm mulDivAsm = new MulDivAsm(Register.T0, Register.T1, asmOp);
+            MipsGenerator.getMipsGenerator().addAsm(mulDivAsm);
+            if (op.equals("%")) {
+                HiLoAsm hiLoAsm = new HiLoAsm(Register.T2, "mfhi");
+                MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+            } else {
+                HiLoAsm hiLoAsm = new HiLoAsm(Register.T2, "mflo");
+                MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+            }
+        }
+        MemAsm swAsm = new MemAsm(Register.SP, Register.T2, regOffset, "sw"); //将binary的运算结果保存到栈中
+        MipsGenerator.getMipsGenerator().addAsm(swAsm);
     }
 }
