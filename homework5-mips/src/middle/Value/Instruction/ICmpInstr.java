@@ -72,9 +72,9 @@ public class ICmpInstr extends Instr {
                 asmOp = "sge";
                 break;
         }
-        AluRAsm aluRAsm = new AluRAsm(Register.T0, Register.T1, Register.T2, asmOp);
+        AluRAsm aluRAsm = new AluRAsm(asmOp, Register.T2, Register.T0, Register.T1);
         MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
-        MemAsm swAsm = new MemAsm(Register.SP, Register.T2, regOffset, "sw");
+        MemAsm swAsm = new MemAsm("sw", Register.T2, regOffset, Register.SP);
         MipsGenerator.getMipsGenerator().addAsm(swAsm);
     }
 }

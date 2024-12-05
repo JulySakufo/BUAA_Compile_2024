@@ -4,11 +4,11 @@ import backend.Register;
 
 public class AluRAsm extends RAsm {
     /*
-    * addu, subu, and, or, xor, slt, sgt, sge, seq(set equal), sne, sle
-    */
+     * addu, subu, and, or, xor, slt, sgt, sge, seq(set equal), sne, sle
+     */
     private String op;
     
-    public AluRAsm(Register rs, Register rt, Register rd, String op) {
+    public AluRAsm(String op, Register rd, Register rs, Register rt) {
         super(rs, rt, rd);
         this.op = op;
     }

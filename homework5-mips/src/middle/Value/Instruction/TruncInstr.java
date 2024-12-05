@@ -1,30 +1,36 @@
 package middle.Value.Instruction;
 
+import backend.Assembly.AluIAsm;
+import backend.Assembly.MemAsm;
+import backend.MipsGenerator;
+import backend.Register;
+import backend.RegisterController;
 import middle.Value.Value;
 
 public class TruncInstr extends Instr {
-    private int virtualReg;
-    private boolean flag;
-    
-    public TruncInstr(int virtualReg) {
-        super(null, "%" + virtualReg);
-        this.virtualReg = virtualReg;
-        this.flag = false;
-    }
     
     public TruncInstr(int virtualReg, Value operand) {
         super(null, "%" + virtualReg);
-        this.virtualReg = virtualReg;
         operands.add(operand);
-        this.flag = true;
     }
     
     @Override
     public String toString() { //这是截断指令,用于getchar
-        if (!flag) {
-            return name + " = trunc " + "i32 " + "%" + (virtualReg - 1) + " to i8";
-        } else {
-            return name + " = trunc " + "i32 " + operands.get(0).getName() + " to i8";
-        }
+        return name + " = trunc " + "i32 " + operands.get(0).getName() + " to i8";
+    }
+    
+    @Override
+    public void generateMips() {
+        int allocaOffset = -4;
+        RegisterController.getRegisterController().addCurOffset(allocaOffset);
+        RegisterController.getRegisterController().addValue(name);
+        AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocaOffset);
+        MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
+        RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);
+        AluIAsm andiAsm = new AluIAsm("andi", Register.T1, Register.T0, 0xff);
+        MipsGenerator.getMipsGenerator().addAsm(andiAsm);
+        int regOffset = RegisterController.getRegisterController().getValueOffset(name);
+        MemAsm swAsm = new MemAsm("sw", Register.T1, regOffset, Register.SP);
+        MipsGenerator.getMipsGenerator().addAsm(swAsm);
     }
 }

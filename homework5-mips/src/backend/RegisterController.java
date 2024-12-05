@@ -1,20 +1,21 @@
 package backend;
 
-import backend.Assembly.AluIAsm;
-import backend.Assembly.LiAsm;
-import backend.Assembly.MemAsm;
+import backend.Assembly.*;
 import middle.Value.Value;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class RegisterController {
     private static final RegisterController registerController = new RegisterController();
     private HashMap<String, Integer> spStack; //value对应的在sp中的offset，可以通过offset($sp)去得到对应的值
+    private HashSet<String> contentIsAddress; //判断该虚拟寄存器对应的内存地址里装的内容是值还是地址
     private int curOffset; //现在的sp的偏移量
     
     public RegisterController() {
         this.spStack = new HashMap<>();
+        this.contentIsAddress = new HashSet<>();
         this.curOffset = 0;
     }
     
@@ -42,6 +43,14 @@ public class RegisterController {
         spStack.put(name, curOffset + offset);
     }
     
+    public void addContent(String name) {
+        contentIsAddress.add(name);
+    }
+    
+    public boolean isContentAddress(String name) { //true代表装的是地址，false代表装的不是地址
+        return contentIsAddress.contains(name);
+    }
+    
     public int getValueOffset(String name) { //[spStack.get(name) - curOffset]($sp)即该value的值
         return spStack.get(name) - curOffset;
     }
@@ -50,18 +59,63 @@ public class RegisterController {
         return name.charAt(0) == '%';
     }
     
-    public void dealLwAndLi(String name, Register register) {
+    public boolean isGlobalVar(String name) {
+        return name.charAt(0) == '@';
+    }
+    
+    public void loadToRegisterFromMemory(String name, Register register) { //register是最终加载到值的寄存器
+        //该函数是栈式计算的核心函数
         /*
          * 根据该name是%reg还是imm来进行对应的lw 或者 li操作
          * 均加载到给定的寄存器register
+         * K0,K1寄存器用来活用，该函数结束后可以随时被覆盖
          */
-        if (isRegister(name)) { //是%reg
-            int regOffset = registerController.getValueOffset(name);
-            MemAsm lwAsm = new MemAsm(Register.SP, register, regOffset, "lw");
+        if (isRegister(name)) { //是%reg，局部变量
+            if (isContentAddress(name)) { //对应的是地址
+                int regOffset = registerController.getValueOffset(name);
+                MemAsm lwAsm = new MemAsm("lw", Register.K0, regOffset, Register.SP);
+                MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+                MemAsm lwAsm2 = new MemAsm("lw", register, 0, Register.K0);
+                MipsGenerator.getMipsGenerator().addAsm(lwAsm2);
+            } else {
+                int regOffset = registerController.getValueOffset(name);
+                MemAsm lwAsm = new MemAsm("lw", register, regOffset, Register.SP);
+                MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+            }
+        } else if (isGlobalVar(name)) { //是全局变量，用la从内存中加载出来
+            LaAsm laAsm = new LaAsm(Register.K0, new LabelAsm(name));
+            MipsGenerator.getMipsGenerator().addAsm(laAsm);
+            MemAsm lwAsm = new MemAsm("lw", register, 0, Register.K0); //将值加载到指定寄存器中
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);
-        } else { //是imm
+        } else { //是immediate，立即数
             LiAsm liAsm = new LiAsm(register, Integer.parseInt(name));
             MipsGenerator.getMipsGenerator().addAsm(liAsm);
+        }
+    }
+    
+    public void storeToMemoryFromRegister(String name, Register register) {
+        /*
+        * 把register的值存入内存
+        */
+        if (isRegister(name)) {
+            if (isContentAddress(name)) { //对应的是地址，要存到里面的地址
+                int regOffset = registerController.getValueOffset(name);
+                MemAsm lwAsm = new MemAsm("lw", Register.K0, regOffset, Register.SP);
+                MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+                MemAsm swAsm = new MemAsm("sw", register, 0, Register.K0);
+                MipsGenerator.getMipsGenerator().addAsm(swAsm);
+            } else {
+                int regOffset = registerController.getValueOffset(name);
+                MemAsm swAsm = new MemAsm("sw", register, regOffset, Register.SP);
+                MipsGenerator.getMipsGenerator().addAsm(swAsm);
+            }
+        } else if (isGlobalVar(name)) { //是全局变量
+            LaAsm laAsm = new LaAsm(Register.K0, new LabelAsm(name));
+            MipsGenerator.getMipsGenerator().addAsm(laAsm);
+            MemAsm swAsm = new MemAsm("sw", register, 0, Register.K0);
+            MipsGenerator.getMipsGenerator().addAsm(swAsm);
+        } else {
+        
         }
     }
     
@@ -73,10 +127,10 @@ public class RegisterController {
         int allocOffset = -4;
         registerController.addCurOffset(allocOffset);
         registerController.addValue(resultRegName);
-        AluIAsm addiuAsm = new AluIAsm(Register.SP, Register.SP, allocOffset, "addiu");
+        AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
         MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
         //四元式两个操作数的处理部分 lw 和 li
-        dealLwAndLi(operands.get(0).getName(), Register.T0);
-        dealLwAndLi(operands.get(1).getName(), Register.T1);
+        loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);
+        loadToRegisterFromMemory(operands.get(1).getName(), Register.T1);
     }
 }

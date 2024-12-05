@@ -733,7 +733,7 @@ public class IRGenerator {
                     curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), "getint", "%" + virtualReg));
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) {
                         virtualReg++;
-                        curBasicBlock.addInstruction(new TruncInstr(virtualReg));
+                        curBasicBlock.addInstruction(new TruncInstr(virtualReg, new Value(new Type(), "%" + (virtualReg - 1))));
                         curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     } else {
                         curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
@@ -744,7 +744,7 @@ public class IRGenerator {
                     curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), "getchar", "%" + virtualReg));
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) { //char = getchar()，getchar返回值是i32
                         virtualReg++;
-                        curBasicBlock.addInstruction(new TruncInstr(virtualReg));
+                        curBasicBlock.addInstruction(new TruncInstr(virtualReg, new Value(new Type(), "%" + (virtualReg - 1))));
                         curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     } else { //i32对i32
                         curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), new Value(new Type(), "%" + virtualReg), symbolReg));

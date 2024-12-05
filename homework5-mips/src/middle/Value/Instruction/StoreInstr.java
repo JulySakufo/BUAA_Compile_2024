@@ -50,23 +50,36 @@ public class StoreInstr extends Instr {
             LiAsm liAsm = new LiAsm(Register.T0, value);
             MipsGenerator.getMipsGenerator().addAsm(liAsm); //将值加载到寄存器t0里
             int offset = RegisterController.getRegisterController().getValueOffset(name);
-            MemAsm swAsm = new MemAsm(Register.SP, Register.T0, offset, "sw"); //存到该寄存器对应的内存位置
-            MipsGenerator.getMipsGenerator().addAsm(swAsm);
+            RegisterController.getRegisterController().storeToMemoryFromRegister(name, Register.T0);
         } else { //store i32 operand, i32* %reg2
             if (isOperandRegister(operands.get(0))) { //operand是寄存器
                 int reg1Offset = RegisterController.getRegisterController().getValueOffset(operands.get(0).getName());
-                MemAsm lwAsm = new MemAsm(Register.SP, Register.T0, reg1Offset, "lw");
+                MemAsm lwAsm = new MemAsm("lw", Register.T0, reg1Offset, Register.SP);
                 MipsGenerator.getMipsGenerator().addAsm(lwAsm);
                 int reg2Offset = RegisterController.getRegisterController().getValueOffset(name);
-                MemAsm swAsm = new MemAsm(Register.SP, Register.T0, reg2Offset, "sw");
-                MipsGenerator.getMipsGenerator().addAsm(swAsm);
+                if (RegisterController.getRegisterController().isContentAddress(name)) {
+                    MemAsm lwAsm2 = new MemAsm("lw", Register.T1, reg2Offset, Register.SP);
+                    MipsGenerator.getMipsGenerator().addAsm(lwAsm2);
+                    MemAsm swAsm = new MemAsm("sw", Register.T0, 0, Register.T1);
+                    MipsGenerator.getMipsGenerator().addAsm(swAsm);
+                } else {
+                    MemAsm swAsm = new MemAsm("sw", Register.T0, reg2Offset, Register.SP);
+                    MipsGenerator.getMipsGenerator().addAsm(swAsm);
+                }
             } else { //是个值
                 int value = Integer.parseInt(operands.get(0).getName());
                 LiAsm liAsm = new LiAsm(Register.T0, value);
                 MipsGenerator.getMipsGenerator().addAsm(liAsm);
                 int offset = RegisterController.getRegisterController().getValueOffset(name);
-                MemAsm swAsm = new MemAsm(Register.SP, Register.T0, offset, "sw");
-                MipsGenerator.getMipsGenerator().addAsm(swAsm);
+                if (RegisterController.getRegisterController().isContentAddress(name)) {
+                    MemAsm lwAsm = new MemAsm("lw", Register.T1, offset, Register.SP); //取出对应的地址
+                    MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+                    MemAsm swAsm = new MemAsm("sw", Register.T0, 0, Register.T1); //存到该地址里才是正确的
+                    MipsGenerator.getMipsGenerator().addAsm(swAsm);
+                } else {
+                    MemAsm swAsm = new MemAsm("sw", Register.T0, offset, Register.SP);
+                    MipsGenerator.getMipsGenerator().addAsm(swAsm);
+                }
             }
             
         }

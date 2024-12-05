@@ -5,7 +5,7 @@ import backend.Register;
 public class MemAsm extends IAsm {
     private String op;
     
-    public MemAsm(Register rs, Register rt, int offset, String op) {
+    public MemAsm(String op, Register rt, int offset, Register rs) {
         super(rs, rt, offset);
         this.op = op;
     }

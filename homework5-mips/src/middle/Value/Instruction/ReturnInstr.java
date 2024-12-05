@@ -30,7 +30,7 @@ public class ReturnInstr extends Instr {
     @Override
     public void generateMips() {
         if (!(type instanceof VoidType)) { //如果有返回值，存到v0中
-            RegisterController.getRegisterController().dealLwAndLi(name, Register.V0);
+            RegisterController.getRegisterController().loadToRegisterFromMemory(name, Register.V0);
         }
         JrAsm jrAsm = new JrAsm(Register.RA);
         MipsGenerator.getMipsGenerator().addAsm(jrAsm);
