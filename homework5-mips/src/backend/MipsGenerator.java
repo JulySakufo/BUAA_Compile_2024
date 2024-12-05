@@ -10,7 +10,6 @@ import java.util.ArrayList;
 
 public class MipsGenerator {
     private static final MipsGenerator mipsGenerator = new MipsGenerator();
-    private Module module;
     private ArrayList<Data> dataSegment;
     private ArrayList<Asm> textSegment;
     
@@ -20,7 +19,6 @@ public class MipsGenerator {
     }
     
     public void generateMips(Module module) {
-        this.module = module;
         module.generateMips();
         try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework5-mips\\src\\mips.txt"))) {
             stdout.write(".data\n");

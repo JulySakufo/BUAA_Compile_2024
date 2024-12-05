@@ -23,15 +23,13 @@ public class ZeroExtInstr extends Instr {
     }
     
     @Override
-    public void generateMips() { //扩展不需要干啥
+    public void generateMips() { //扩展只需要分配一个空间即可
         int allocOffset = -4;
         RegisterController.getRegisterController().addCurOffset(allocOffset);
         RegisterController.getRegisterController().addValue(name);
         AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
         MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
         RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0); //加载到t0中
-        int regOffset = RegisterController.getRegisterController().getValueOffset(name);
-        MemAsm swAsm = new MemAsm("sw", Register.T0, regOffset, Register.SP);
-        MipsGenerator.getMipsGenerator().addAsm(swAsm); //存入
+        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name);
     }
 }

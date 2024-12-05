@@ -45,7 +45,6 @@ public class BinaryInstr extends Instr {
     @Override
     public void generateMips() {
         RegisterController.getRegisterController().dealAluRAsmRsRt(name, operands);
-        int regOffset = RegisterController.getRegisterController().getValueOffset(name);
         String asmOp = null;
         if (op.equals("+") || op.equals("-")) { // + -的运算
             switch (op) {
@@ -56,7 +55,7 @@ public class BinaryInstr extends Instr {
                     asmOp = "subu";
                     break;
             }
-            AluRAsm adduAsm = new AluRAsm(asmOp,Register.T2,Register.T0,Register.T1);
+            AluRAsm adduAsm = new AluRAsm(asmOp, Register.T2, Register.T0, Register.T1);
             MipsGenerator.getMipsGenerator().addAsm(adduAsm);
         } else { // * / %的运算
             switch (op) {
@@ -78,7 +77,6 @@ public class BinaryInstr extends Instr {
                 MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
             }
         }
-        MemAsm swAsm = new MemAsm("sw", Register.T2, regOffset, Register.SP);//将binary的运算结果保存到栈中
-        MipsGenerator.getMipsGenerator().addAsm(swAsm);
+        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T2, name);//将binary的运算结果保存到栈中
     }
 }

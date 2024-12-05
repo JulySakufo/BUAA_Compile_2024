@@ -1,5 +1,11 @@
 package middle.Value.Instruction;
 
+import backend.Assembly.AluIAsm;
+import backend.Assembly.LiAsm;
+import backend.Assembly.SyscallAsm;
+import backend.MipsGenerator;
+import backend.Register;
+import backend.RegisterController;
 import middle.Type.ArrayType;
 import middle.Type.Type;
 import middle.Type.VoidType;
@@ -56,5 +62,44 @@ public class CallInstr extends Instr {
         }
         sb.append(")");
         return sb.toString();
+    }
+    
+    @Override
+    public void generateMips() { //%reg = call i32 @getint()
+        if (!(type instanceof VoidType)) { //有返回值的要接住返回值
+            int allocOffset = -4;
+            RegisterController.getRegisterController().addCurOffset(allocOffset);
+            RegisterController.getRegisterController().addValue(name);
+            AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
+            MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
+        }
+        if (functionName.equals("getint")) { //这些都是系统调用
+            LiAsm liAsm = new LiAsm(Register.V0, 5);
+            MipsGenerator.getMipsGenerator().addAsm(liAsm);
+            SyscallAsm syscallAsm = new SyscallAsm();
+            MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
+            RegisterController.getRegisterController().storeToMemoryFromRegister(Register.V0, name);
+        } else if (functionName.equals("getchar")) {
+            LiAsm liAsm = new LiAsm(Register.V0, 12);
+            MipsGenerator.getMipsGenerator().addAsm(liAsm);
+            SyscallAsm syscallAsm = new SyscallAsm();
+            MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
+            RegisterController.getRegisterController().storeToMemoryFromRegister(Register.V0, name);
+        } else if (functionName.equals("putint")) { //只有一个参数
+            RegisterController.getRegisterController().loadToRegisterFromMemory(funcRParams.get(0).getName(), Register.A0);
+            LiAsm liAsm = new LiAsm(Register.V0, 1);
+            MipsGenerator.getMipsGenerator().addAsm(liAsm);
+            SyscallAsm syscallAsm = new SyscallAsm();
+            MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
+        } else if (functionName.equals("putch")) { //只有一个参数
+            RegisterController.getRegisterController().loadToRegisterFromMemory(funcRParams.get(0).getName(), Register.A0);
+            LiAsm liAsm = new LiAsm(Register.V0, 11);
+            MipsGenerator.getMipsGenerator().addAsm(liAsm);
+            SyscallAsm syscallAsm = new SyscallAsm();
+            MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
+        } else {
+            /*TODO*/
+            
+        }
     }
 }

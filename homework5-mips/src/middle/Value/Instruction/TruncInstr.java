@@ -29,8 +29,6 @@ public class TruncInstr extends Instr {
         RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);
         AluIAsm andiAsm = new AluIAsm("andi", Register.T1, Register.T0, 0xff);
         MipsGenerator.getMipsGenerator().addAsm(andiAsm);
-        int regOffset = RegisterController.getRegisterController().getValueOffset(name);
-        MemAsm swAsm = new MemAsm("sw", Register.T1, regOffset, Register.SP);
-        MipsGenerator.getMipsGenerator().addAsm(swAsm);
+        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T1,name);
     }
 }

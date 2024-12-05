@@ -24,32 +24,32 @@ public class ICmpInstr extends Instr {
     
     @Override
     public String toString() {
+        String instrOp = null;
         switch (compareOp) {
             case "==":
-                compareOp = "eq";
+                instrOp = "eq";
                 break;
             case "!=":
-                compareOp = "ne";
+                instrOp = "ne";
                 break;
             case "<":
-                compareOp = "slt";
+                instrOp = "slt";
                 break;
             case ">":
-                compareOp = "sgt";
+                instrOp = "sgt";
                 break;
             case "<=":
-                compareOp = "sle";
+                instrOp = "sle";
                 break;
             case ">=":
-                compareOp = "sge";
+                instrOp = "sge";
                 break;
         }
-        return name + " = icmp " + compareOp + " " + compareType + " " + operands.get(0).getName() + ", " + operands.get(1).getName();
+        return name + " = icmp " + instrOp + " " + compareType + " " + operands.get(0).getName() + ", " + operands.get(1).getName();
     }
     
     @Override
     public void generateMips() {
-        int regOffset = RegisterController.getRegisterController().getValueOffset(name);
         RegisterController.getRegisterController().dealAluRAsmRsRt(name, operands);
         String asmOp = null;
         switch (compareOp) {
@@ -74,7 +74,6 @@ public class ICmpInstr extends Instr {
         }
         AluRAsm aluRAsm = new AluRAsm(asmOp, Register.T2, Register.T0, Register.T1);
         MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
-        MemAsm swAsm = new MemAsm("sw", Register.T2, regOffset, Register.SP);
-        MipsGenerator.getMipsGenerator().addAsm(swAsm);
+        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T2, name);
     }
 }

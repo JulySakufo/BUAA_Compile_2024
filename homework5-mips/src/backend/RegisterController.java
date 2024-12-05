@@ -1,6 +1,7 @@
 package backend;
 
 import backend.Assembly.*;
+import middle.Value.Function;
 import middle.Value.Value;
 
 import java.util.ArrayList;
@@ -12,11 +13,13 @@ public class RegisterController {
     private HashMap<String, Integer> spStack; //value对应的在sp中的offset，可以通过offset($sp)去得到对应的值
     private HashSet<String> contentIsAddress; //判断该虚拟寄存器对应的内存地址里装的内容是值还是地址
     private int curOffset; //现在的sp的偏移量
+    private Function curFunction; //当前是哪个函数
     
     public RegisterController() {
         this.spStack = new HashMap<>();
         this.contentIsAddress = new HashSet<>();
         this.curOffset = 0;
+        this.curFunction = null;
     }
     
     public static RegisterController getRegisterController() {
@@ -64,10 +67,10 @@ public class RegisterController {
     }
     
     public void loadToRegisterFromMemory(String name, Register register) { //register是最终加载到值的寄存器
-        //该函数是栈式计算的核心函数
         /*
+         * 该函数是栈式计算的核心函数
          * 根据该name是%reg还是imm来进行对应的lw 或者 li操作
-         * 均加载到给定的寄存器register
+         * 把name对应的内存的值加载到给定的寄存器register
          * K0,K1寄存器用来活用，该函数结束后可以随时被覆盖
          */
         if (isRegister(name)) { //是%reg，局部变量
@@ -83,7 +86,7 @@ public class RegisterController {
                 MipsGenerator.getMipsGenerator().addAsm(lwAsm);
             }
         } else if (isGlobalVar(name)) { //是全局变量，用la从内存中加载出来
-            LaAsm laAsm = new LaAsm(Register.K0, new LabelAsm(name));
+            LaAsm laAsm = new LaAsm(Register.K0, new LabelAsm(name.substring(1))); //去掉前面的@
             MipsGenerator.getMipsGenerator().addAsm(laAsm);
             MemAsm lwAsm = new MemAsm("lw", register, 0, Register.K0); //将值加载到指定寄存器中
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);
@@ -93,10 +96,11 @@ public class RegisterController {
         }
     }
     
-    public void storeToMemoryFromRegister(String name, Register register) {
+    public void storeToMemoryFromRegister(Register register, String name) {
         /*
-        * 把register的值存入内存
-        */
+         * 该函数是栈式计算的核心函数，如此包装便可以不管操作的究竟是局部变量、全局变量、立即数了，只需要调用
+         * 把register的值存入name对应的内存
+         */
         if (isRegister(name)) {
             if (isContentAddress(name)) { //对应的是地址，要存到里面的地址
                 int regOffset = registerController.getValueOffset(name);
@@ -110,12 +114,12 @@ public class RegisterController {
                 MipsGenerator.getMipsGenerator().addAsm(swAsm);
             }
         } else if (isGlobalVar(name)) { //是全局变量
-            LaAsm laAsm = new LaAsm(Register.K0, new LabelAsm(name));
+            LaAsm laAsm = new LaAsm(Register.K0, new LabelAsm(name.substring(1)));
             MipsGenerator.getMipsGenerator().addAsm(laAsm);
             MemAsm swAsm = new MemAsm("sw", register, 0, Register.K0);
             MipsGenerator.getMipsGenerator().addAsm(swAsm);
         } else {
-        
+            System.out.println("store may happen some error!");
         }
     }
     

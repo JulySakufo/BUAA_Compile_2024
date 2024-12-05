@@ -64,10 +64,8 @@ public class GetElementInstr extends Instr {
             int elementOffset = 4 * index;
             AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.T0, Register.SP, initialOffset + elementOffset);
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm2); //将该位置保存在t0中
-            int regOffset = RegisterController.getRegisterController().getValueOffset(name);
-            MemAsm swAsm = new MemAsm("sw", Register.T0, regOffset, Register.SP);
+            RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name); //将元素位置保存在%reg对应的内存里
             RegisterController.getRegisterController().addContent(name);
-            MipsGenerator.getMipsGenerator().addAsm(swAsm); //将元素位置保存在%reg对应的内存里
         } else {
             if (!RegisterController.getRegisterController().isRegister(operands.get(0).getName())) { //不是寄存器
                 int initialOffset = RegisterController.getRegisterController().getValueOffset(lastName);
@@ -75,25 +73,19 @@ public class GetElementInstr extends Instr {
                 int elementOffset = 4 * index;
                 AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.T0, Register.SP, initialOffset + elementOffset);
                 MipsGenerator.getMipsGenerator().addAsm(addiuAsm2); //将该位置保存在t0中
-                int regOffset = RegisterController.getRegisterController().getValueOffset(name);
-                MemAsm swAsm = new MemAsm("sw", Register.T0, regOffset, Register.SP);
+                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name);
                 RegisterController.getRegisterController().addContent(name);
-                MipsGenerator.getMipsGenerator().addAsm(swAsm); //将元素位置保存在%reg对应的内存里
             } else { //i32 0, i32 %reg
                 int initialOffset = RegisterController.getRegisterController().getValueOffset(lastName);
-                int operandOffset = RegisterController.getRegisterController().getValueOffset(operands.get(0).getName());
-                MemAsm lwAsm = new MemAsm("lw", Register.T0, operandOffset, Register.SP);//将operand对应的值lw到t0
-                MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+                RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);//将operand对应的值lw到t0
                 AluIAsm sllAsm = new AluIAsm("sll", Register.T0, Register.T0, 2);//operand*4
                 MipsGenerator.getMipsGenerator().addAsm(sllAsm); //与数组首元素的偏移保存在t0中
                 AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.T1, Register.SP, initialOffset);
                 MipsGenerator.getMipsGenerator().addAsm(addiuAsm2); //数组首元素的地址
                 AluRAsm aluRAsm = new AluRAsm("addu", Register.T2, Register.T0, Register.T1);
                 MipsGenerator.getMipsGenerator().addAsm(aluRAsm); //该元素所在的位置(绝对地址)
-                int regOffset = RegisterController.getRegisterController().getValueOffset(name);
-                MemAsm swAsm = new MemAsm("sw", Register.T2, regOffset, Register.SP); //将绝对地址存到对应的寄存器
+                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T2, name);
                 RegisterController.getRegisterController().addContent(name); //这个地址装的是地址
-                MipsGenerator.getMipsGenerator().addAsm(swAsm); //存的地址
             }
         }
     }
