@@ -1,5 +1,8 @@
 package middle.Value;
 
+import backend.Assembly.LabelAsm;
+import backend.MipsGenerator;
+import backend.RegisterController;
 import middle.Type.Type;
 import middle.Type.VoidType;
 import middle.Value.Instruction.AllocaInstr;
@@ -34,6 +37,10 @@ public class Function extends Value {
         return params;
     }
     
+    public int getIndexOfBlock(BasicBlock basicBlock) { //返回基本块是function的第几个
+        return basicBlocks.indexOf(basicBlock);
+    }
+    
     public boolean isLastInstrReturnVoid() {
         Instr instr = basicBlocks.get(basicBlocks.size() - 1).getLastInstr();
         return instr instanceof ReturnInstr && instr.getType() instanceof VoidType;
@@ -65,12 +72,14 @@ public class Function extends Value {
     
     @Override
     public void generateMips() {
-        
+        RegisterController.getRegisterController().enterFunction(this); //准备对当前函数生成mips
+        MipsGenerator.getMipsGenerator().addAsm(new LabelAsm(name)); //对当前是哪个函数生成标签名
         for (Param param : params) {
             param.generateMips();
         }
         for (BasicBlock basicBlock : basicBlocks) {
             basicBlock.generateMips();
         }
+        RegisterController.getRegisterController().leaveFunction(this);
     }
 }

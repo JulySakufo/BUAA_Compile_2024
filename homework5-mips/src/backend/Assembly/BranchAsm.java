@@ -9,7 +9,7 @@ public class BranchAsm extends IAsm {
     private String op;
     private LabelAsm labelAsm;
     
-    public BranchAsm(Register rs, Register rt, String op, LabelAsm labelAsm) {
+    public BranchAsm(String op, Register rs, Register rt, LabelAsm labelAsm) {
         super(rs, rt, 0);
         this.op = op;
         this.labelAsm = labelAsm;

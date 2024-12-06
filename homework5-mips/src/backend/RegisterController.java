@@ -10,14 +10,14 @@ import java.util.HashSet;
 
 public class RegisterController {
     private static final RegisterController registerController = new RegisterController();
-    private HashMap<String, Integer> spStack; //value对应的在sp中的offset，可以通过offset($sp)去得到对应的值
-    private HashSet<String> contentIsAddress; //判断该虚拟寄存器对应的内存地址里装的内容是值还是地址
+    private HashMap<Function, HashMap<String, Integer>> spStack; //value对应的在sp中的offset，可以通过offset($sp)去得到对应的值
+    private HashMap<Function, HashSet<String>> contentIsAddress; //判断该虚拟寄存器对应的内存地址里装的内容是值还是地址
     private int curOffset; //现在的sp的偏移量
     private Function curFunction; //当前是哪个函数
     
     public RegisterController() {
         this.spStack = new HashMap<>();
-        this.contentIsAddress = new HashSet<>();
+        this.contentIsAddress = new HashMap<>();
         this.curOffset = 0;
         this.curFunction = null;
     }
@@ -26,36 +26,46 @@ public class RegisterController {
         return registerController;
     }
     
-    public int getCurOffset() {
-        return curOffset;
+    public void enterFunction(Function function) { //更新当前函数的情况，保证对于每一个函数进行操作的时候，都是针对的自己的栈顶sp
+        this.curFunction = function;
+        HashMap<String, Integer> hashMap = new HashMap<>();
+        spStack.put(curFunction, hashMap);
+        HashSet<String> hashSet = new HashSet<>();
+        contentIsAddress.put(curFunction, hashSet);
+        curOffset = 0;
+    }
+    
+    public void leaveFunction(Function function) {
+        curOffset = 0;
     }
     
     public void addCurOffset(int offset) {
         curOffset += offset;
     }
     
-    public HashMap<String, Integer> getSpStack() {
-        return spStack;
-    }
     
     public void addValue(String name) {
-        spStack.put(name, curOffset);
+        spStack.get(curFunction).put(name, curOffset);
     }
     
     public void addValue(String name, Integer offset) {
-        spStack.put(name, curOffset + offset);
+        spStack.get(curFunction).put(name, curOffset + offset);
     }
     
     public void addContent(String name) {
-        contentIsAddress.add(name);
+        contentIsAddress.get(curFunction).add(name);
     }
     
     public boolean isContentAddress(String name) { //true代表装的是地址，false代表装的不是地址
-        return contentIsAddress.contains(name);
+        return contentIsAddress.get(curFunction).contains(name);
     }
     
     public int getValueOffset(String name) { //[spStack.get(name) - curOffset]($sp)即该value的值
-        return spStack.get(name) - curOffset;
+        return spStack.get(curFunction).get(name) - curOffset;
+    }
+    
+    public Function getCurFunction() {
+        return curFunction;
     }
     
     public boolean isRegister(String name) {

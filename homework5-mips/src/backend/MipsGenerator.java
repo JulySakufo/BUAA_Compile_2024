@@ -26,6 +26,7 @@ public class MipsGenerator {
                 stdout.write(data.toString());
             }
             stdout.write(".text\n");
+            stdout.write("\tj main\n");
             for (Asm asm : textSegment) {
                 stdout.write(asm.toString() + "\n");
             }

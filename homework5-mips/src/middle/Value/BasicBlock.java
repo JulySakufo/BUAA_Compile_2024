@@ -1,7 +1,9 @@
 package middle.Value;
 
 import backend.Assembly.CommentAsm;
+import backend.Assembly.LabelAsm;
 import backend.MipsGenerator;
+import backend.RegisterController;
 import middle.Type.Type;
 import middle.Value.Instruction.Instr;
 import middle.Value.Instruction.ReturnInstr;
@@ -59,6 +61,10 @@ public class BasicBlock extends Value {
     
     @Override
     public void generateMips() {
+        if (!isFirstBlock && !instructions.isEmpty()) { //不是第一个块，输出当前标签
+            Function function = RegisterController.getRegisterController().getCurFunction();
+            MipsGenerator.getMipsGenerator().addAsm(new LabelAsm(function.getName() + "_" + function.getIndexOfBlock(this)));
+        }
         for (Instr instr : instructions) {
             CommentAsm commentAsm = new CommentAsm(instr.toString());
             MipsGenerator.getMipsGenerator().addAsm(commentAsm);

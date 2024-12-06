@@ -1,17 +1,18 @@
 package middle.Value.Instruction;
 
-import backend.Assembly.AluIAsm;
-import backend.Assembly.LiAsm;
-import backend.Assembly.SyscallAsm;
+import backend.Assembly.*;
 import backend.MipsGenerator;
 import backend.Register;
 import backend.RegisterController;
 import middle.Type.ArrayType;
 import middle.Type.Type;
 import middle.Type.VoidType;
+import middle.Value.Function;
 import middle.Value.Value;
 
+import java.lang.invoke.SwitchPoint;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class CallInstr extends Instr {
     private String functionName;
@@ -99,6 +100,27 @@ public class CallInstr extends Instr {
             MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
         } else {
             /*TODO*/
+            MemAsm swAsm = new MemAsm("sw", Register.SP, -4, Register.SP); //记录函数调用返回时的调用者的sp位置
+            MipsGenerator.getMipsGenerator().addAsm(swAsm);
+            MemAsm swAsm2 = new MemAsm("sw", Register.RA, -8, Register.SP); //记录函数调用返回时调用者的ra
+            MipsGenerator.getMipsGenerator().addAsm(swAsm2);
+            
+            AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, -8);
+            MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
+            
+            MoveAsm moveAsm = new MoveAsm(Register.FP, Register.SP);
+            MipsGenerator.getMipsGenerator().addAsm(moveAsm); //用fp来保存现在的sp，且保证fp只在此处用到
+            
+            
+            
+            JAsm jalAsm = new JAsm("jal", new LabelAsm(functionName));
+            MipsGenerator.getMipsGenerator().addAsm(jalAsm);
+            
+            MemAsm lwAsm = new MemAsm("lw", Register.RA, -8, Register.FP); //函数调用结束，恢复调用者的相关信息
+            MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+            MemAsm lwAsm2 = new MemAsm("lw", Register.SP, -4, Register.FP);
+            MipsGenerator.getMipsGenerator().addAsm(lwAsm2);
+            
             
         }
     }
