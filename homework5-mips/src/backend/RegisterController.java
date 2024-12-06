@@ -10,16 +10,18 @@ import java.util.HashSet;
 
 public class RegisterController {
     private static final RegisterController registerController = new RegisterController();
-    private HashMap<Function, HashMap<String, Integer>> spStack; //value对应的在sp中的offset，可以通过offset($sp)去得到对应的值
-    private HashMap<Function, HashSet<String>> contentIsAddress; //判断该虚拟寄存器对应的内存地址里装的内容是值还是地址
+    private HashMap<String, HashMap<String, Integer>> spStack; //value对应的在sp中的offset，可以通过offset($sp)去得到对应的值
+    private HashMap<String, HashSet<String>> contentIsAddress; //判断该虚拟寄存器对应的内存地址里装的内容是值还是地址
     private int curOffset; //现在的sp的偏移量
     private Function curFunction; //当前是哪个函数
+    private HashMap<String, Integer> offsetMap; //记录函数编译时候的偏移量，用于结束函数调用时调整sp的值
     
     public RegisterController() {
         this.spStack = new HashMap<>();
         this.contentIsAddress = new HashMap<>();
         this.curOffset = 0;
         this.curFunction = null;
+        this.offsetMap = new HashMap<>();
     }
     
     public static RegisterController getRegisterController() {
@@ -29,13 +31,15 @@ public class RegisterController {
     public void enterFunction(Function function) { //更新当前函数的情况，保证对于每一个函数进行操作的时候，都是针对的自己的栈顶sp
         this.curFunction = function;
         HashMap<String, Integer> hashMap = new HashMap<>();
-        spStack.put(curFunction, hashMap);
+        spStack.put(curFunction.getName(), hashMap);
         HashSet<String> hashSet = new HashSet<>();
-        contentIsAddress.put(curFunction, hashSet);
+        contentIsAddress.put(curFunction.getName(), hashSet);
         curOffset = 0;
     }
     
-    public void leaveFunction(Function function) {
+    public void leaveFunction() { //记录该函数用到的栈空间
+        offsetMap.put(curFunction.getName(), curOffset);
+        curFunction = null;
         curOffset = 0;
     }
     
@@ -45,27 +49,31 @@ public class RegisterController {
     
     
     public void addValue(String name) {
-        spStack.get(curFunction).put(name, curOffset);
+        spStack.get(curFunction.getName()).put(name, curOffset);
     }
     
     public void addValue(String name, Integer offset) {
-        spStack.get(curFunction).put(name, curOffset + offset);
+        spStack.get(curFunction.getName()).put(name, curOffset + offset);
     }
     
     public void addContent(String name) {
-        contentIsAddress.get(curFunction).add(name);
+        contentIsAddress.get(curFunction.getName()).add(name);
     }
     
     public boolean isContentAddress(String name) { //true代表装的是地址，false代表装的不是地址
-        return contentIsAddress.get(curFunction).contains(name);
+        return contentIsAddress.get(curFunction.getName()).contains(name);
     }
     
     public int getValueOffset(String name) { //[spStack.get(name) - curOffset]($sp)即该value的值
-        return spStack.get(curFunction).get(name) - curOffset;
+        return spStack.get(curFunction.getName()).get(name) - curOffset;
     }
     
     public Function getCurFunction() {
         return curFunction;
+    }
+    
+    public int getFunctionOffset(String functionName) { //得到该函数对sp进行了多少的偏移操作
+        return offsetMap.get(functionName);
     }
     
     public boolean isRegister(String name) {
@@ -74,6 +82,23 @@ public class RegisterController {
     
     public boolean isGlobalVar(String name) {
         return name.charAt(0) == '@';
+    }
+    
+    public void passArguments(String name, Register register) {
+        if (isRegister(name)) {
+            int regOffset = registerController.getValueOffset(name);
+            MemAsm lwAsm = new MemAsm("lw", register, regOffset, Register.SP);
+            MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+        } else if (isGlobalVar(name)) {
+            /*TODO 我似乎没有考虑数组 */
+            LaAsm laAsm = new LaAsm(Register.K0, new LabelAsm(name.substring(1)));
+            MipsGenerator.getMipsGenerator().addAsm(laAsm);
+            MemAsm lwAsm = new MemAsm("lw", register, 0, Register.K0);
+            MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+        } else {
+            LiAsm liAsm = new LiAsm(register, Integer.parseInt(name));
+            MipsGenerator.getMipsGenerator().addAsm(liAsm);
+        }
     }
     
     public void loadToRegisterFromMemory(String name, Register register) { //register是最终加载到值的寄存器

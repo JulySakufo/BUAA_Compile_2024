@@ -80,6 +80,6 @@ public class Function extends Value {
         for (BasicBlock basicBlock : basicBlocks) {
             basicBlock.generateMips();
         }
-        RegisterController.getRegisterController().leaveFunction(this);
+        RegisterController.getRegisterController().leaveFunction();
     }
 }
