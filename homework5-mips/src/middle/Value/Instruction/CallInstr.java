@@ -122,6 +122,7 @@ public class CallInstr extends Instr {
             JAsm jalAsm = new JAsm("jal", new LabelAsm(functionName));
             MipsGenerator.getMipsGenerator().addAsm(jalAsm);
             
+            /*TODO 考虑递归函数，这时候get到当前函数的offset为空(因为还没有放回去)，所以感觉可以搞一个totalOffset，当检测到是递归函数(get到的为空)，用这种方式计算functionOffset，否则用getFunctionOffset*/
             int functionOffset = -RegisterController.getRegisterController().getFunctionOffset(functionName); //得到该操作对sp进行了多少的偏移，恢复取-号
             MemAsm lwAsm = new MemAsm("lw", Register.RA, functionOffset, Register.SP); //函数调用结束，恢复调用者的相关信息
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);

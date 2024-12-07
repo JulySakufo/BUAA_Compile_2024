@@ -84,6 +84,30 @@ public class RegisterController {
         return name.charAt(0) == '@';
     }
     
+    public void getBaseAddressOfArray(String name, Register register, boolean relative) {
+        /*
+         * 得到数组基地址
+         */
+        if (isRegister(name)) { //局部数组取得基地址的方式
+            if (!relative) { //绝对寻址取得基地址的方式
+                int offset = registerController.getValueOffset(name);
+                AluIAsm addiuAsm = new AluIAsm("addiu", register, Register.SP, offset);
+                MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
+            } else { //相对寻址取得基地址的方式
+                int offset = registerController.getValueOffset(name);
+                AluIAsm addiuAsm = new AluIAsm("addiu", Register.K0, Register.SP, offset);
+                MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
+                MemAsm lwAsm = new MemAsm("lw", register, 0, Register.K0);
+                MipsGenerator.getMipsGenerator().addAsm(lwAsm);
+            }
+        } else if (isGlobalVar(name)) { //全局数组取得基地址的方式
+            LaAsm laAsm = new LaAsm(register, new LabelAsm(name.substring(1)));
+            MipsGenerator.getMipsGenerator().addAsm(laAsm);
+        } else {
+            System.out.println("getBaseAddressOfArray may happen some error!");
+        }
+    }
+    
     public void passArguments(String name, Register register) {
         if (isRegister(name)) {
             int regOffset = registerController.getValueOffset(name);
