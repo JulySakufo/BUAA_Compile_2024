@@ -1,0 +1,23 @@
+int add(int a[]){
+    a[1] = 2;
+    int array[5];
+    array[1] = 2;
+    array[2] = 4;
+    return 1;
+}
+
+int main(){
+    int arr[5];
+    arr[0] = 1;
+    int a = add(arr);
+    return 0;
+}
+
+/*------------------------*\
+
+int main() {
+    int a[1];
+    a[0] =
+    1 + 2;
+    return a[0];
+}

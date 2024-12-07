@@ -119,7 +119,7 @@ public class Lexer {
             case '|':
                 char ch = line.charAt(pos++);
                 sb.append(ch);
-                if (line.charAt(pos) == ch) { // (&&) | (||)
+                if (pos < line.length() && line.charAt(pos) == ch) { // (&&) | (||)
                     sb.append(line.charAt(pos));
                     TokenType tokenType = getTokenType(sb.toString());
                     Token token = new Token(sb.toString(), tokenType, lineNum);
@@ -142,7 +142,7 @@ public class Lexer {
             case '=':
                 char ch2 = line.charAt(pos++);
                 sb.append(ch2);
-                if (line.charAt(pos) == '=') { //!= || <= || >= || ==
+                if (pos < line.length() && line.charAt(pos) == '=') { //!= || <= || >= || ==
                     sb.append(line.charAt(pos));
                     TokenType tokenType = getTokenType(sb.toString());
                     Token token = new Token(sb.toString(), tokenType, lineNum);
@@ -157,9 +157,9 @@ public class Lexer {
             case '/':
                 char ch3 = line.charAt(pos++);
                 sb.append(ch3);
-                if (line.charAt(pos) == '/') { //为单行注释，将pos直接置于行末
+                if (pos < line.length() && line.charAt(pos) == '/') { //为单行注释，将pos直接置于行末
                     pos = line.length() - 1;
-                } else if (line.charAt(pos) == '*') { //为多行注释，先将pos置于这一行的行末
+                } else if (pos < line.length() && line.charAt(pos) == '*') { //为多行注释，先将pos置于这一行的行末
                     if (!line.contains("*/")) { //多行注释未结束在本行
                         pos = line.length() - 1;
                         isBlockComment = true;
