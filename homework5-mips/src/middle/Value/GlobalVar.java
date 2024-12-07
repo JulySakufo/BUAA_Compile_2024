@@ -44,7 +44,7 @@ public class GlobalVar extends Value {
     @Override
     public void generateMips() {
         String name = symbol.getName();
-        String type = this.type instanceof Integer32Type ? ".word" : ".byte";
+        String type = ".word";
         ArrayList<Integer> values = new ArrayList<>();
         if (!symbol.getIsArray()) { //如果是常量,values.get(0)是值
             values.add(symbol.getValue());
