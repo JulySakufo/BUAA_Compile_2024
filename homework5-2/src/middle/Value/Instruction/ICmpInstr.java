@@ -18,26 +18,27 @@ public class ICmpInstr extends Instr {
     
     @Override
     public String toString() {
+        String instrOp = null;
         switch (compareOp) {
             case "==":
-                compareOp = "eq";
+                instrOp = "eq";
                 break;
             case "!=":
-                compareOp = "ne";
+                instrOp = "ne";
                 break;
             case "<":
-                compareOp = "slt";
+                instrOp = "slt";
                 break;
             case ">":
-                compareOp = "sgt";
+                instrOp = "sgt";
                 break;
             case "<=":
-                compareOp = "sle";
+                instrOp = "sle";
                 break;
             case ">=":
-                compareOp = "sge";
+                instrOp = "sge";
                 break;
         }
-        return name + " = icmp " + compareOp + " " + compareType + " " + operands.get(0).getName() + ", " + operands.get(1).getName();
+        return name + " = icmp " + instrOp + " " + compareType + " " + operands.get(0).getName() + ", " + operands.get(1).getName();
     }
 }
