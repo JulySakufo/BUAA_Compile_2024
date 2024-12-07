@@ -52,7 +52,7 @@ public class IRGenerator {
                 generateMainFuncDef(child);
             }
         }
-        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework5-2\\src\\llvm_ir.txt"))) {
+        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("llvm_ir.txt"))) {
             stdout.write(module.toString());
         } catch (Exception ignored) {
         
