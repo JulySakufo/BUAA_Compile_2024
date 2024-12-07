@@ -474,7 +474,7 @@ public class Parser {
     
     public SyntaxNode parseAddExp() { //MulExp{+-MulExp}
         SyntaxNode node = new SyntaxNode("AddExp");
-        node.addChild(parseMulExp());/*TODO:语法树构建错误，需要修改*/
+        node.addChild(parseMulExp());
         infos.add("<AddExp>");
         while (peekToken().getTokenType() == TokenType.PLUS || peekToken().getTokenType() == TokenType.MINU) {
             SyntaxNode node2 = new SyntaxNode("AddExp");
