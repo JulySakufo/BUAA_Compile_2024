@@ -27,8 +27,6 @@ public class ZeroExtInstr extends Instr {
         int allocOffset = -4;
         RegisterController.getRegisterController().addCurOffset(allocOffset);
         RegisterController.getRegisterController().addValue(name);
-        AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
-        MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
         RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0); //加载到t0中
         RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name);
     }

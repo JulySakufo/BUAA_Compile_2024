@@ -28,14 +28,10 @@ public class AllocaInstr extends Instr {
         if (type instanceof ArrayType) { //%reg = alloca [arrayLength x i32]
             int allocOffset = -((ArrayType) type).getArrayLength() * 4;
             RegisterController.getRegisterController().addCurOffset(allocOffset);//申请连续的数组空间
-            AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
-            MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
             RegisterController.getRegisterController().addValue(name); //将%reg与内存建立关系，后面的getElement以此索引
         } else { //%reg = alloca i32(i8) || i32*(i8*)
             int offset = -4;
             RegisterController.getRegisterController().addCurOffset(offset); //申请一个空间
-            AluIAsm addiuAsm = new AluIAsm("addiu",Register.SP,Register.SP,offset);
-            MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
             RegisterController.getRegisterController().addValue(name); //保存在sp里，建立%reg与offset的联系
         }
     }

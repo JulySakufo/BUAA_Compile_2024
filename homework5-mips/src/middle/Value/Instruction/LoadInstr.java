@@ -25,8 +25,6 @@ public class LoadInstr extends Instr {
         int allocOffset = -4;
         RegisterController.getRegisterController().addCurOffset(allocOffset); //为了将这个reg1存进去，新开辟空间
         RegisterController.getRegisterController().addValue(name); //建立%reg与内存的关系
-        AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
-        MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
         int regOffset = RegisterController.getRegisterController().getValueOffset(name);
         RegisterController.getRegisterController().loadToRegisterFromMemory(from, Register.T0); //值加载到t0中
         MemAsm swAsm = new MemAsm("sw", Register.T0, regOffset, Register.SP);

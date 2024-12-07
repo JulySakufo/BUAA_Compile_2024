@@ -52,8 +52,8 @@ public class RegisterController {
         spStack.get(curFunction.getName()).put(name, curOffset);
     }
     
-    public void addValue(String name, Integer offset) {
-        spStack.get(curFunction.getName()).put(name, curOffset + offset);
+    public int getCurOffset() {
+        return curOffset;
     }
     
     public void addContent(String name) {
@@ -65,8 +65,11 @@ public class RegisterController {
     }
     
     public int getValueOffset(String name) { //[spStack.get(name) - curOffset]($sp)即该value的值
-        return spStack.get(curFunction.getName()).get(name) - curOffset;
-    } /*TODO*/
+        /*
+         * 在不移动sp的情况下，该函数返回的就应该是距sp的偏移量，不能用相对偏移，那样会造成compile和run的不一致
+         */
+        return spStack.get(curFunction.getName()).get(name);
+    }
     
     public Function getCurFunction() {
         return curFunction;
@@ -190,8 +193,6 @@ public class RegisterController {
         int allocOffset = -4;
         registerController.addCurOffset(allocOffset);
         registerController.addValue(resultRegName);
-        AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
-        MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
         //四元式两个操作数的处理部分 lw 和 li
         loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);
         loadToRegisterFromMemory(operands.get(1).getName(), Register.T1);

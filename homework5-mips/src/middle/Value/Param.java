@@ -21,7 +21,5 @@ public class Param extends Value {
         int allocOffset = -4;
         RegisterController.getRegisterController().addCurOffset(allocOffset);
         RegisterController.getRegisterController().addValue(name);
-        AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
-        MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
     }
 }

@@ -71,8 +71,6 @@ public class CallInstr extends Instr {
             int allocOffset = -4;
             RegisterController.getRegisterController().addCurOffset(allocOffset);
             RegisterController.getRegisterController().addValue(name);
-            AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
-            MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
         }
         if (functionName.equals("getint")) { //这些都是系统调用
             LiAsm liAsm = new LiAsm(Register.V0, 5);
@@ -99,36 +97,33 @@ public class CallInstr extends Instr {
             SyscallAsm syscallAsm = new SyscallAsm();
             MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
         } else {
-            /*TODO*/
-            /*int allocOffset = -4;
-            RegisterController.getRegisterController().addCurOffset(allocOffset);
-            RegisterController.getRegisterController().addValue(name);
-            AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, allocOffset);
-            MipsGenerator.getMipsGenerator().addAsm(addiuAsm);*/ //存取函数调用返回值
-            
             RegisterController.getRegisterController().addCurOffset(-4);
-            AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, -4);
-            MipsGenerator.getMipsGenerator().addAsm(addiuAsm);
-            MemAsm swAsm = new MemAsm("sw", Register.RA, 0, Register.SP); //记录函数调用返回时调用者的ra
+            int totalOffset = RegisterController.getRegisterController().getCurOffset(); //记录当前的移动量，不移动sp，sp唯一的移动就是调用函数时候切换
+            MemAsm swAsm = new MemAsm("sw", Register.RA, totalOffset, Register.SP); //记录函数调用返回时调用者的ra
             MipsGenerator.getMipsGenerator().addAsm(swAsm);
             
             for (int i = 0; i < funcRParams.size(); i++) { //参数属于下一个函数，因此sp放在参数区即可
                 Value funcRParam = funcRParams.get(i);
                 RegisterController.getRegisterController().passArguments(funcRParam.getName(), Register.T0);
-                MemAsm swAsm2 = new MemAsm("sw", Register.T0, -4 * (i + 1), Register.SP); //将参数存进栈里
+                MemAsm swAsm2 = new MemAsm("sw", Register.T0, totalOffset + -4 * (i + 1), Register.SP); //将参数存进栈里
                 MipsGenerator.getMipsGenerator().addAsm(swAsm2); //将数保存在内存
             }
+            
+            /*移动sp，唯一移动的地方*/
+            AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, totalOffset);
+            MipsGenerator.getMipsGenerator().addAsm(addiuAsm); //拥有了新的栈顶
             
             JAsm jalAsm = new JAsm("jal", new LabelAsm(functionName));
             MipsGenerator.getMipsGenerator().addAsm(jalAsm);
             
-            /*TODO 考虑递归函数，这时候get到当前函数的offset为空(因为还没有放回去)，所以感觉可以搞一个totalOffset，当检测到是递归函数(get到的为空)，用这种方式计算functionOffset，否则用getFunctionOffset*/
-            int functionOffset = -RegisterController.getRegisterController().getFunctionOffset(functionName); //得到该操作对sp进行了多少的偏移，恢复取-号
-            MemAsm lwAsm = new MemAsm("lw", Register.RA, functionOffset, Register.SP); //函数调用结束，恢复调用者的相关信息
+            MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4, Register.SP);
+            MipsGenerator.getMipsGenerator().addAsm(swAsm2); //存储函数调用的返回值
+            MemAsm lwAsm = new MemAsm("lw", Register.RA, 0, Register.SP); //函数调用结束，恢复调用者的相关信息
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);
-            AluIAsm addiuAsm3 = new AluIAsm("addiu", Register.SP, Register.SP, functionOffset + 8); //恢复调用者的当前sp
-            MipsGenerator.getMipsGenerator().addAsm(addiuAsm3);
-            RegisterController.getRegisterController().addCurOffset(8); //回到调用函数前的offset，调用函数额外花费了8个偏移
+            AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.SP, Register.SP, -totalOffset); //恢复栈顶位置
+            MipsGenerator.getMipsGenerator().addAsm(addiuAsm2);
+            /*TODO 不太确定最后一步的恢复curOffset的值是否正确 先填4看看*/
+            RegisterController.getRegisterController().addCurOffset(4); //回到调用函数前的offset，调用函数额外花费了4个偏移，因为返回值是需要的
         }
     }
 }
