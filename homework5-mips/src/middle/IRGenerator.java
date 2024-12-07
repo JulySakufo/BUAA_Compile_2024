@@ -391,6 +391,7 @@ public class IRGenerator {
         String type = node.getChildren().get(0).getName();
         String name = node.getChildren().get(1).getName();
         Symbol symbol = new Symbol(name, "para", type, getStackLevel(stack.peek()));
+        symbol.setIsParam(true); //是形参，用于getelementptr的取址方式
         stack.peek().addSymbol(symbol);
         if (node.getLastChild().getName().equals("]")) { //数组参数
             symbol.setIsArray(true);
@@ -716,8 +717,7 @@ public class IRGenerator {
             String symbolReg = symbol.getVirtualReg(); //symbol对应的寄存器
             if (node.getChildren().get(0).getChildren().size() > 1) { //数组 ident[Exp]
                 Value operand = generateExp(node.getChildren().get(0).getChildren().get(2)); //exp的寄存器
-                if (!curFunction.getName().equals("main") && !symbol.getIsGlobal()) { //局部函数且使用的非全局变量数组
-                    //相对位移，防止调用的是参数的数组
+                if (symbol.getIsParam()) { //是形参数组
                     GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, operand, symbolReg, 2);
                     curBasicBlock.addInstruction(getElementInstr); //得到数组元素
                 } else {
@@ -783,7 +783,7 @@ public class IRGenerator {
                     virtualReg++;
                     return loadInstr; //把load指令返回回去，由binary取load的最前面的虚拟寄存器作为binary的operand
                 } else { //数组整个整体，不是单独的元素
-                    if (!curFunction.getName().equals("main") && !symbol.getIsGlobal()) { //相对位移
+                    if (symbol.getIsParam()) {
                         GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, new Value(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), String.valueOf(0)), symbolReg, 2);
                         curBasicBlock.addInstruction(getElementInstr);
                         virtualReg++;
@@ -797,7 +797,7 @@ public class IRGenerator {
                 }
             } else { //ident[Exp]
                 Value operand = generateExp(node.getChildren().get(2)); //得到exp的寄存器
-                if (!curFunction.getName().equals("main") && !symbol.getIsGlobal()) { //相对位移，防止调用的是参数的数组
+                if (symbol.getIsParam()) {
                     GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, operand, symbolReg, 2);
                     curBasicBlock.addInstruction(getElementInstr); //得到数组元素
                 } else {

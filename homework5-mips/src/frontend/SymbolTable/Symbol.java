@@ -15,6 +15,7 @@ public class Symbol {
     private int value; //是常数时的值
     private ArrayList<Integer> values; //是数组时对应的数组元素值
     private String virtualReg; //局部变量的虚拟寄存器
+    private boolean isParam; //看它是否是形参
     
     public Symbol(String name, String kind, String type, int level) {
         this.name = name;
@@ -27,6 +28,7 @@ public class Symbol {
         this.value = 0;
         this.values = new ArrayList<>();
         this.virtualReg = null;
+        this.isParam = false;
     }
     
     public Symbol(String name, String kind, String type, int level, boolean isGlobal) {
@@ -95,6 +97,10 @@ public class Symbol {
         return virtualReg;
     }
     
+    public boolean getIsParam() {
+        return isParam;
+    }
+    
     public void setVirtualReg(String virtualReg) {
         this.virtualReg = virtualReg;
     }
@@ -129,6 +135,10 @@ public class Symbol {
     
     public void setIsGlobal(boolean isGlobal) {
         this.isGlobal = isGlobal;
+    }
+    
+    public void setIsParam(boolean isParam) {
+        this.isParam = isParam;
     }
     
     public boolean isConstChar() {
