@@ -887,7 +887,7 @@ public class IRGenerator {
                 case "!":
                     /* !仅出现在条件表达式 */
                     Value operand2 = generateUnaryExp(node.getChildren().get(1));
-                    ICmpInstr iCmpInstr = new ICmpInstr(operand2.getType(), "%" + virtualReg, operand2, new Value(new Integer32Type(), "0"), "eq");
+                    ICmpInstr iCmpInstr = new ICmpInstr(operand2.getType(), "%" + virtualReg, operand2, new Value(new Integer32Type(), "0"), "==");
                     virtualReg++;
                     curBasicBlock.addInstruction(iCmpInstr);
                     return iCmpInstr;
@@ -980,7 +980,7 @@ public class IRGenerator {
             curFunction.addBasicBlock(curBasicBlock); //切换到短路求值的下一个基本块
             Value operand2 = generateEqExp(children.get(2)); //得到iCmpInstr,icmp后一定紧跟有条件跳转
             if (!(operand2.getType() instanceof BoolType)) {
-                ICmpInstr iCmpInstr = new ICmpInstr(operand2.getType(), "%" + virtualReg, operand2, new Value(new Integer32Type(), "0"), "ne");
+                ICmpInstr iCmpInstr = new ICmpInstr(operand2.getType(), "%" + virtualReg, operand2, new Value(new Integer32Type(), "0"), "!=");
                 curBasicBlock.addInstruction(iCmpInstr);
                 virtualReg++;
                 return iCmpInstr;
@@ -989,7 +989,7 @@ public class IRGenerator {
         } else { //与0进行判断
             Value operand = generateEqExp(node.getChildren().get(0)); //要么是一个数值，要么是一个关系表达式已经cmp过了
             if (!(operand.getType() instanceof BoolType)) { //不是一个icmpInstr，比如是一个变量c，需要与0进行cmp
-                ICmpInstr iCmpInstr = new ICmpInstr(operand.getType(), "%" + virtualReg, operand, new Value(new Integer32Type(), "0"), "ne");
+                ICmpInstr iCmpInstr = new ICmpInstr(operand.getType(), "%" + virtualReg, operand, new Value(new Integer32Type(), "0"), "!=");
                 curBasicBlock.addInstruction(iCmpInstr);
                 virtualReg++;
                 return iCmpInstr;
