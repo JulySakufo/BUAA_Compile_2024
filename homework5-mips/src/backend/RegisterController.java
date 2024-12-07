@@ -14,14 +14,12 @@ public class RegisterController {
     private HashMap<String, HashSet<String>> contentIsAddress; //判断该虚拟寄存器对应的内存地址里装的内容是值还是地址
     private int curOffset; //现在的sp的偏移量
     private Function curFunction; //当前是哪个函数
-    private HashMap<String, Integer> offsetMap; //记录函数编译时候的偏移量，用于结束函数调用时调整sp的值
     
     public RegisterController() {
         this.spStack = new HashMap<>();
         this.contentIsAddress = new HashMap<>();
         this.curOffset = 0;
         this.curFunction = null;
-        this.offsetMap = new HashMap<>();
     }
     
     public static RegisterController getRegisterController() {
@@ -38,7 +36,6 @@ public class RegisterController {
     }
     
     public void leaveFunction() { //记录该函数用到的栈空间
-        offsetMap.put(curFunction.getName(), curOffset);
         curFunction = null;
         curOffset = 0;
     }
@@ -73,10 +70,6 @@ public class RegisterController {
     
     public Function getCurFunction() {
         return curFunction;
-    }
-    
-    public int getFunctionOffset(String functionName) { //得到该函数对sp进行了多少的偏移操作
-        return offsetMap.get(functionName);
     }
     
     public boolean isRegister(String name) {

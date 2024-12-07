@@ -116,14 +116,17 @@ public class CallInstr extends Instr {
             JAsm jalAsm = new JAsm("jal", new LabelAsm(functionName));
             MipsGenerator.getMipsGenerator().addAsm(jalAsm);
             
-            MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4, Register.SP);
-            MipsGenerator.getMipsGenerator().addAsm(swAsm2); //存储函数调用的返回值
+            if (!(type instanceof VoidType)) { //有返回值的要存储返回值
+                MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4, Register.SP);
+                MipsGenerator.getMipsGenerator().addAsm(swAsm2); //存储函数调用的返回值
+            }
             MemAsm lwAsm = new MemAsm("lw", Register.RA, 0, Register.SP); //函数调用结束，恢复调用者的相关信息
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);
             AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.SP, Register.SP, -totalOffset); //恢复栈顶位置
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm2);
-            /*TODO 不太确定最后一步的恢复curOffset的值是否正确 先填4看看*/
-            RegisterController.getRegisterController().addCurOffset(4); //回到调用函数前的offset，调用函数额外花费了4个偏移，因为返回值是需要的
+            if (!(type instanceof VoidType)) { //有返回值的要考虑到新增了一个返回值需要用内存
+                RegisterController.getRegisterController().addCurOffset(4); //回到调用函数前的offset，调用函数额外花费了4个偏移，因为返回值是需要的
+            }
         }
     }
 }
