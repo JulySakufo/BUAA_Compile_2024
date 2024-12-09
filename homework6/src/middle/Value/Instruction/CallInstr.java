@@ -134,7 +134,7 @@ public class CallInstr extends Instr {
                 Value funcRParam = funcRParams.get(i);
                 if (args.isEmpty()) {
                     RegisterController.getRegisterController().passArguments(funcRParam.getName(), Register.K0);
-                    MemAsm swAsm2 = new MemAsm("sw", Register.K0, totalOffset + -4 * (i + 1), Register.SP); //将参数存进栈里
+                    MemAsm swAsm2 = new MemAsm("sw", Register.K0, totalOffset + -4 * (i-2), Register.SP); //将参数存进栈里
                     MipsGenerator.getMipsGenerator().addAsm(swAsm2); //将数保存在内存
                 } else {
                     Register register = args.remove(0);
@@ -149,7 +149,7 @@ public class CallInstr extends Instr {
             MipsGenerator.getMipsGenerator().addAsm(jalAsm);
             AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.SP, Register.SP, -totalOffset); //恢复栈顶位置
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm2);
-            
+            /*TODO 好像感觉这里恢复的有点问题? 不太确定*/
             RegisterController.getRegisterController().restoreUsedRegisters(); //恢复寄存器的值
             if (!(type instanceof VoidType)) { //有返回值的要存储返回值
                 Register register = RegisterController.getRegisterController().getRegister(name);
