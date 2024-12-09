@@ -108,7 +108,7 @@ public class RegisterController {
          * 这样就实现了知道(1)哪些寄存器可用和不可用 (2)找对应的value直接去找register看有无，有,用register，无，用内存寻址
          */
         if (value.getRegister() == null) {
-            if (!freeRegisters.isEmpty()) {
+            if (!freeRegisters.isEmpty() && !(value.getType() instanceof ArrayType)) { //数组不存在寄存器
                 Register register = freeRegisters.remove(0);
                 value.setRegister(register);
                 usedRegisters.add(register);
