@@ -127,7 +127,7 @@ public class CallInstr extends Instr {
             MipsGenerator.getMipsGenerator().addAsm(swAsm);
             RegisterController.getRegisterController().storeUsedRegisters(); //将当前寄存器的值全压入栈中，现在这些寄存器可以被覆盖
             int totalOffset = RegisterController.getRegisterController().getCurOffset(); //当前真正的移动量
-            
+            int regOffset = RegisterController.getRegisterController().getUsedRegsSize() * 4;
             /*TODO 传递参数*/
             for (int i = 0; i < funcRParams.size(); i++) { //参数属于下一个函数，因此sp放在参数区即可
                 Value funcRParam = funcRParams.get(i);
@@ -152,14 +152,14 @@ public class CallInstr extends Instr {
             if (!(type instanceof VoidType)) { //有返回值的要存储返回值
                 Register register = RegisterController.getRegisterController().getRegister(name);
                 if (register == null) { //将返回值保存在内存里
-                    MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4, Register.SP);
+                    MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4 + regOffset, Register.SP);
                     MipsGenerator.getMipsGenerator().addAsm(swAsm2); //存储函数调用的返回值
                 } else { //将返回值保存在寄存器里
                     MoveAsm moveAsm = new MoveAsm(register, Register.V0);
                     MipsGenerator.getMipsGenerator().addAsm(moveAsm);
                 }
             }
-            MemAsm lwAsm = new MemAsm("lw", Register.RA, 0, Register.SP); //函数调用结束，恢复调用者的相关信息
+            MemAsm lwAsm = new MemAsm("lw", Register.RA, regOffset, Register.SP); //函数调用结束，恢复调用者的相关信息
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);
             AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.SP, Register.SP, -totalOffset); //恢复栈顶位置
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm2);
