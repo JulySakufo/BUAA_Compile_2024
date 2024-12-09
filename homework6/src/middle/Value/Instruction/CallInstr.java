@@ -67,65 +67,107 @@ public class CallInstr extends Instr {
     
     @Override
     public void generateMips() { //%reg = call i32 @getint()
-        if (!(type instanceof VoidType)) { //有返回值的要接住返回值
-            int allocOffset = -4;
-            RegisterController.getRegisterController().addCurOffset(allocOffset);
-            RegisterController.getRegisterController().addValue(name);
-        }
         if (functionName.equals("getint")) { //这些都是系统调用
+            RegisterController.getRegisterController().distributeRegister(this); //有返回值的要接住返回值
             LiAsm liAsm = new LiAsm(Register.V0, 5);
             MipsGenerator.getMipsGenerator().addAsm(liAsm);
             SyscallAsm syscallAsm = new SyscallAsm();
             MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
-            RegisterController.getRegisterController().storeToMemoryFromRegister(Register.V0, name);
+            Register register = RegisterController.getRegisterController().getRegister(name);
+            if (register == null) {
+                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.V0, name);
+            } else {
+                MoveAsm moveAsm = new MoveAsm(register, Register.V0);
+                MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+            }
         } else if (functionName.equals("getchar")) {
+            RegisterController.getRegisterController().distributeRegister(this); //有返回值的要接住返回值
             LiAsm liAsm = new LiAsm(Register.V0, 12);
             MipsGenerator.getMipsGenerator().addAsm(liAsm);
             SyscallAsm syscallAsm = new SyscallAsm();
             MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
-            RegisterController.getRegisterController().storeToMemoryFromRegister(Register.V0, name);
+            Register register = RegisterController.getRegisterController().getRegister(name);
+            if (register == null) {
+                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.V0, name);
+            } else {
+                MoveAsm moveAsm = new MoveAsm(register, Register.V0);
+                MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+            }
         } else if (functionName.equals("putint")) { //只有一个参数
-            RegisterController.getRegisterController().loadToRegisterFromMemory(funcRParams.get(0).getName(), Register.A0);
+            Register register = RegisterController.getRegisterController().getRegister(funcRParams.get(0).getName());
+            if (register == null) {
+                RegisterController.getRegisterController().loadToRegisterFromMemory(funcRParams.get(0).getName(), Register.A0);
+            } else {
+                MoveAsm moveAsm = new MoveAsm(Register.A0, register);
+                MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+            }
             LiAsm liAsm = new LiAsm(Register.V0, 1);
             MipsGenerator.getMipsGenerator().addAsm(liAsm);
             SyscallAsm syscallAsm = new SyscallAsm();
             MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
         } else if (functionName.equals("putch")) { //只有一个参数
-            RegisterController.getRegisterController().loadToRegisterFromMemory(funcRParams.get(0).getName(), Register.A0);
+            Register register = RegisterController.getRegisterController().getRegister(funcRParams.get(0).getName());
+            if (register == null) {
+                RegisterController.getRegisterController().loadToRegisterFromMemory(funcRParams.get(0).getName(), Register.A0);
+            } else {
+                MoveAsm moveAsm = new MoveAsm(Register.A0, register);
+                MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+            }
             LiAsm liAsm = new LiAsm(Register.V0, 11);
             MipsGenerator.getMipsGenerator().addAsm(liAsm);
             SyscallAsm syscallAsm = new SyscallAsm();
             MipsGenerator.getMipsGenerator().addAsm(syscallAsm);
-        } else {
-            RegisterController.getRegisterController().addCurOffset(-4);
-            int totalOffset = RegisterController.getRegisterController().getCurOffset(); //记录当前的移动量，不移动sp，sp唯一的移动就是调用函数时候切换
-            MemAsm swAsm = new MemAsm("sw", Register.RA, totalOffset, Register.SP); //记录函数调用返回时调用者的ra
+        } else { //先返回值，再ra，再寄存器
+            if (!(type instanceof VoidType)) {
+                RegisterController.getRegisterController().distributeRegister(this); //有返回值的要接住返回值
+            }
+            RegisterController.getRegisterController().addCurOffset(-4); //给ra挪位置，但无需绑定，因为会被覆盖
+            int tempOffset = RegisterController.getRegisterController().getCurOffset(); //记录当前的移动量，不移动sp，sp唯一的移动就是调用函数时候切换
+            MemAsm swAsm = new MemAsm("sw", Register.RA, tempOffset, Register.SP); //记录函数调用返回时调用者的ra
             MipsGenerator.getMipsGenerator().addAsm(swAsm);
+            RegisterController.getRegisterController().storeUsedRegisters(); //将当前寄存器的值全压入栈中，现在这些寄存器可以被覆盖
+            int totalOffset = RegisterController.getRegisterController().getCurOffset(); //当前真正的移动量
             
+            /*TODO 传递参数*/
             for (int i = 0; i < funcRParams.size(); i++) { //参数属于下一个函数，因此sp放在参数区即可
                 Value funcRParam = funcRParams.get(i);
-                RegisterController.getRegisterController().passArguments(funcRParam.getName(), Register.T0);
-                MemAsm swAsm2 = new MemAsm("sw", Register.T0, totalOffset + -4 * (i + 1), Register.SP); //将参数存进栈里
-                MipsGenerator.getMipsGenerator().addAsm(swAsm2); //将数保存在内存
+                ArrayList<Register> args = Register.getFreeArgs();
+                if (args.isEmpty()) {
+                    RegisterController.getRegisterController().passArguments(funcRParam.getName(), Register.K0);
+                    MemAsm swAsm2 = new MemAsm("sw", Register.K0, totalOffset + -4 * (i + 1), Register.SP); //将参数存进栈里
+                    MipsGenerator.getMipsGenerator().addAsm(swAsm2); //将数保存在内存
+                } else {
+                    Register register = args.remove(0);
+                    RegisterController.getRegisterController().passArguments(funcRParam.getName(), register);
+                }
             }
             
             /*移动sp，唯一移动的地方*/
             AluIAsm addiuAsm = new AluIAsm("addiu", Register.SP, Register.SP, totalOffset);
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm); //拥有了新的栈顶
-            
             JAsm jalAsm = new JAsm("jal", new LabelAsm(functionName));
             MipsGenerator.getMipsGenerator().addAsm(jalAsm);
             
+            RegisterController.getRegisterController().restoreUsedRegisters(); //恢复寄存器的值
             if (!(type instanceof VoidType)) { //有返回值的要存储返回值
-                MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4, Register.SP);
-                MipsGenerator.getMipsGenerator().addAsm(swAsm2); //存储函数调用的返回值
+                Register register = RegisterController.getRegisterController().getRegister(name);
+                if (register == null) { //将返回值保存在内存里
+                    MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4, Register.SP);
+                    MipsGenerator.getMipsGenerator().addAsm(swAsm2); //存储函数调用的返回值
+                } else { //将返回值保存在寄存器里
+                    MoveAsm moveAsm = new MoveAsm(register, Register.V0);
+                    MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+                }
             }
             MemAsm lwAsm = new MemAsm("lw", Register.RA, 0, Register.SP); //函数调用结束，恢复调用者的相关信息
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);
             AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.SP, Register.SP, -totalOffset); //恢复栈顶位置
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm2);
             if (!(type instanceof VoidType)) { //有返回值的要考虑到新增了一个返回值需要用内存
-                RegisterController.getRegisterController().addCurOffset(4); //回到调用函数前的offset，调用函数额外花费了4个偏移，因为返回值是需要的
+                Register register = RegisterController.getRegisterController().getRegister(name);
+                if (register == null) { //
+                    RegisterController.getRegisterController().addCurOffset(4); //回到调用函数前的offset，调用函数额外花费了4个偏移，因为返回值是需要的
+                }
             }
         }
     }

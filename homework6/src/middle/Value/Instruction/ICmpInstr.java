@@ -50,7 +50,18 @@ public class ICmpInstr extends Instr {
     
     @Override
     public void generateMips() {
-        RegisterController.getRegisterController().dealAluRAsmRsRt(name, operands);
+        RegisterController.getRegisterController().distributeRegister(this);
+        Register rs = RegisterController.getRegisterController().getRegister(operands.get(0).getName());
+        Register rt = RegisterController.getRegisterController().getRegister(operands.get(1).getName());
+        Register rd = RegisterController.getRegisterController().getRegister(name);
+        if (rs == null) { //向rs，rt存入值
+            rs = Register.K0;
+            RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), rs);
+        }
+        if (rt == null) {
+            rt = Register.K1;
+            RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(1).getName(), rt);
+        }
         String asmOp = null;
         switch (compareOp) {
             case "==":
@@ -72,8 +83,15 @@ public class ICmpInstr extends Instr {
                 asmOp = "sge";
                 break;
         }
-        AluRAsm aluRAsm = new AluRAsm(asmOp, Register.T2, Register.T0, Register.T1);
-        MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
-        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T2, name);
+        if (rd == null) { //存入内存
+            rd = Register.K1;
+            AluRAsm aluRAsm = new AluRAsm(asmOp, rd, rs, rt);
+            MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
+            RegisterController.getRegisterController().storeToMemoryFromRegister(rd, name);
+        } else { //无需存入内存
+            AluRAsm aluRAsm = new AluRAsm(asmOp, rd, rs, rt);
+            MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
+        }
+        
     }
 }

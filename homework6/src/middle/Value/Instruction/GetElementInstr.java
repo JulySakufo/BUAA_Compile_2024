@@ -1,9 +1,6 @@
 package middle.Value.Instruction;
 
-import backend.Assembly.AluIAsm;
-import backend.Assembly.AluRAsm;
-import backend.Assembly.LiAsm;
-import backend.Assembly.MemAsm;
+import backend.Assembly.*;
 import backend.MipsGenerator;
 import backend.Register;
 import backend.RegisterController;
@@ -53,35 +50,67 @@ public class GetElementInstr extends Instr {
     
     @Override
     public void generateMips() { //与alloca起的作用差不多
-        int allocOffset = -4;
-        RegisterController.getRegisterController().addCurOffset(allocOffset);
-        RegisterController.getRegisterController().addValue(name); //将%reg与内存对应
+        RegisterController.getRegisterController().distributeRegister(this); //将%reg与内存对应
         if (flag == 0) { //%reg = getelementptr i32,i32* %1, i32 0,i32 index
             //把数组元素的地址放在reg里
-            RegisterController.getRegisterController().getBaseAddressOfArray(lastName, Register.T0, false);
+            Register baseRegister = RegisterController.getRegisterController().getRegister(lastName);
+            if (baseRegister == null) {
+                baseRegister = Register.K0;
+                RegisterController.getRegisterController().getBaseAddressOfArray(lastName, baseRegister, false);
+            }
             int elementOffset = 4 * index;
-            AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.T0, Register.T0, elementOffset);
+            AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.K0, baseRegister, elementOffset); //此处地址也保存在K0处
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm2); //将该位置保存在t0中
-            RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name); //将元素位置保存在%reg对应的内存里
-            RegisterController.getRegisterController().addContent(name);
+            Register nameRegister = RegisterController.getRegisterController().getRegister(name);
+            if (nameRegister == null) { //无寄存器
+                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.K0, name); //将元素位置保存在%reg对应的内存里
+                RegisterController.getRegisterController().addContent(name);
+            } else { //有寄存器
+                MoveAsm moveAsm = new MoveAsm(nameRegister, Register.K0); //nameRegister存放地址值
+                MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+            }
         } else if (flag == 1) {
             if (!RegisterController.getRegisterController().isRegister(operands.get(0).getName())) { //不是寄存器
-                RegisterController.getRegisterController().getBaseAddressOfArray(lastName, Register.T0, false);
+                Register baseRegister = RegisterController.getRegisterController().getRegister(lastName);
                 int index = Integer.parseInt(operands.get(0).getName());
+                if (baseRegister == null) {
+                    baseRegister = Register.K0;
+                    RegisterController.getRegisterController().getBaseAddressOfArray(lastName, baseRegister, false);
+                }
                 int elementOffset = 4 * index;
-                AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.T0, Register.T0, elementOffset);
+                AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.K0, baseRegister, elementOffset); //此处地址也保存在K0处
                 MipsGenerator.getMipsGenerator().addAsm(addiuAsm2); //将该位置保存在t0中
-                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name);
-                RegisterController.getRegisterController().addContent(name);
+                Register nameRegister = RegisterController.getRegisterController().getRegister(name);
+                if (nameRegister == null) { //无寄存器
+                    RegisterController.getRegisterController().storeToMemoryFromRegister(Register.K0, name); //将元素位置保存在%reg对应的内存里
+                    RegisterController.getRegisterController().addContent(name);
+                } else { //有寄存器
+                    MoveAsm moveAsm = new MoveAsm(nameRegister, Register.K0); //nameRegister存放地址值
+                    MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+                }
             } else { //i32 0, i32 %reg
-                RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);//将operand对应的值lw到t0
-                AluIAsm sllAsm = new AluIAsm("sll", Register.T0, Register.T0, 2);//operand*4
-                MipsGenerator.getMipsGenerator().addAsm(sllAsm); //与数组首元素的偏移保存在t0中
-                RegisterController.getRegisterController().getBaseAddressOfArray(lastName, Register.T1, false); //数组首元素的地址
-                AluRAsm aluRAsm = new AluRAsm("addu", Register.T2, Register.T0, Register.T1);
-                MipsGenerator.getMipsGenerator().addAsm(aluRAsm); //该元素所在的位置(绝对地址)
-                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T2, name);
-                RegisterController.getRegisterController().addContent(name); //这个地址装的是地址
+                Register baseRegister = RegisterController.getRegisterController().getRegister(lastName);
+                if (baseRegister == null) {
+                    baseRegister = Register.K0;
+                    RegisterController.getRegisterController().getBaseAddressOfArray(lastName, baseRegister, false); //数组首元素的地址
+                }
+                Register operandRegister = RegisterController.getRegisterController().getRegister(operands.get(0).getName());
+                if (operandRegister == null) {
+                    operandRegister = Register.K1;
+                    RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), operandRegister); //将operand对应的值lw到operandRegister
+                }
+                AluIAsm sllAsm = new AluIAsm("sll", Register.K1, operandRegister, 2); //operand*4保存在K1中
+                MipsGenerator.getMipsGenerator().addAsm(sllAsm); //与数组首元素的偏移保存在K1中
+                AluRAsm aluRAsm = new AluRAsm("addu", Register.K0, baseRegister, Register.K1);
+                MipsGenerator.getMipsGenerator().addAsm(aluRAsm); //该元素所在的位置(绝对地址)保存在K0中
+                Register nameRegister = RegisterController.getRegisterController().getRegister(name);
+                if (nameRegister == null) {
+                    RegisterController.getRegisterController().storeToMemoryFromRegister(Register.K0, name);
+                    RegisterController.getRegisterController().addContent(name); //这个地址装的是地址
+                } else {
+                    MoveAsm moveAsm = new MoveAsm(nameRegister, Register.K0);
+                    MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+                }
             }
         } else {
             /*
@@ -92,20 +121,45 @@ public class GetElementInstr extends Instr {
             if (!RegisterController.getRegisterController().isRegister(operands.get(0).getName())) {
                 int index = Integer.parseInt(operands.get(0).getName());
                 int elementOffset = 4 * index;
-                RegisterController.getRegisterController().getBaseAddressOfArray(lastName, Register.T0, true); //将数组首地址加载到t0中
-                AluIAsm addiuAsm3 = new AluIAsm("addiu", Register.T0, Register.T0, elementOffset);
+                Register baseRegister = RegisterController.getRegisterController().getRegister(lastName); //数组首地址保存在这个寄存器
+                if (baseRegister == null) {
+                    baseRegister = Register.K0;
+                    RegisterController.getRegisterController().getBaseAddressOfArray(lastName, baseRegister, true); //将数组首地址加载到t0中
+                }
+                AluIAsm addiuAsm3 = new AluIAsm("addiu", Register.K0, baseRegister, elementOffset); //元素地址保存在K0中
                 MipsGenerator.getMipsGenerator().addAsm(addiuAsm3);
-                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name);
-                RegisterController.getRegisterController().addContent(name);
+                Register nameRegister = RegisterController.getRegisterController().getRegister(name);
+                if (nameRegister == null) {
+                    RegisterController.getRegisterController().storeToMemoryFromRegister(Register.K0, name);
+                    RegisterController.getRegisterController().addContent(name);
+                } else {
+                    MoveAsm moveAsm = new MoveAsm(nameRegister, Register.K0);
+                    MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+                }
             } else {
-                RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);
-                AluIAsm sllAsm = new AluIAsm("sll", Register.T0, Register.T0, 2);
+                /*TODO*/
+                Register baseRegister = RegisterController.getRegisterController().getRegister(lastName);
+                if (baseRegister == null) {
+                    baseRegister = Register.K1;
+                    RegisterController.getRegisterController().getBaseAddressOfArray(lastName, baseRegister, true);
+                }
+                Register operandRegister = RegisterController.getRegisterController().getRegister(operands.get(0).getName());
+                if (operandRegister == null) {
+                    operandRegister = Register.K0;
+                    RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), baseRegister);
+                }
+                AluIAsm sllAsm = new AluIAsm("sll", Register.K0, operandRegister, 2);
                 MipsGenerator.getMipsGenerator().addAsm(sllAsm);
-                RegisterController.getRegisterController().getBaseAddressOfArray(lastName, Register.T1, true);
-                AluRAsm aluRAsm = new AluRAsm("addu", Register.T2, Register.T0, Register.T1);
+                AluRAsm aluRAsm = new AluRAsm("addu", Register.K0, baseRegister, Register.K0); //位置保存在K0中
                 MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
-                RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T2, name);
-                RegisterController.getRegisterController().addContent(name);
+                Register nameRegister = RegisterController.getRegisterController().getRegister(name);
+                if (nameRegister == null) {
+                    RegisterController.getRegisterController().storeToMemoryFromRegister(Register.K0, name);
+                    RegisterController.getRegisterController().addContent(name);
+                } else {
+                    MoveAsm moveAsm = new MoveAsm(nameRegister, Register.K0);
+                    MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+                }
             }
         }
     }

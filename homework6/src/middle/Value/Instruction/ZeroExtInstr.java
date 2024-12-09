@@ -2,6 +2,7 @@ package middle.Value.Instruction;
 
 import backend.Assembly.AluIAsm;
 import backend.Assembly.MemAsm;
+import backend.Assembly.MoveAsm;
 import backend.MipsGenerator;
 import backend.Register;
 import backend.RegisterController;
@@ -24,10 +25,18 @@ public class ZeroExtInstr extends Instr {
     
     @Override
     public void generateMips() { //扩展只需要分配一个空间即可
-        int allocOffset = -4;
-        RegisterController.getRegisterController().addCurOffset(allocOffset);
-        RegisterController.getRegisterController().addValue(name);
-        RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0); //加载到t0中
-        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T0, name);
+        RegisterController.getRegisterController().distributeRegister(this);
+        Register operandRegister = RegisterController.getRegisterController().getRegister(operands.get(0).getName());
+        if (operandRegister == null) {
+            operandRegister = Register.K1;
+            RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), operandRegister); //加载到K1中
+        }
+        Register nameRegister = RegisterController.getRegisterController().getRegister(name);
+        if (nameRegister == null) { //存入内存
+            RegisterController.getRegisterController().storeToMemoryFromRegister(operandRegister, name);
+        } else { //寄存器暂存
+            MoveAsm moveAsm = new MoveAsm(nameRegister, operandRegister);
+            MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+        }
     }
 }

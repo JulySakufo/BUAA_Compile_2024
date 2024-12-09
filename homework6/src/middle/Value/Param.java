@@ -18,8 +18,6 @@ public class Param extends Value {
     
     @Override
     public void generateMips() { //只需要分配空间即可，剩余的事不归它管
-        int allocOffset = -4;
-        RegisterController.getRegisterController().addCurOffset(allocOffset);
-        RegisterController.getRegisterController().addValue(name);
+        RegisterController.getRegisterController().distributeArg(this);
     }
 }

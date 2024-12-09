@@ -1,7 +1,7 @@
 package middle.Value.Instruction;
 
 import backend.Assembly.AluIAsm;
-import backend.Assembly.MemAsm;
+import backend.Assembly.MoveAsm;
 import backend.MipsGenerator;
 import backend.Register;
 import backend.RegisterController;
@@ -21,12 +21,20 @@ public class TruncInstr extends Instr {
     
     @Override
     public void generateMips() {
-        int allocaOffset = -4;
-        RegisterController.getRegisterController().addCurOffset(allocaOffset);
-        RegisterController.getRegisterController().addValue(name);
-        RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), Register.T0);
-        AluIAsm andiAsm = new AluIAsm("andi", Register.T1, Register.T0, 0xff);
+        RegisterController.getRegisterController().distributeRegister(this);
+        Register operandRegister = RegisterController.getRegisterController().getRegister(operands.get(0).getName());
+        if (operandRegister == null) {
+            operandRegister = Register.K0;
+            RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), operandRegister);
+        }
+        AluIAsm andiAsm = new AluIAsm("andi", Register.K0, operandRegister, 0xff); //截断后的值始终保存在K0中
         MipsGenerator.getMipsGenerator().addAsm(andiAsm);
-        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T1,name);
+        Register nameRegister = RegisterController.getRegisterController().getRegister(name);
+        if (nameRegister == null) {
+            RegisterController.getRegisterController().storeToMemoryFromRegister(Register.K0, name);
+        } else {
+            MoveAsm moveAsm = new MoveAsm(nameRegister, Register.K0);
+            MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package middle.Value.Instruction;
 
 import backend.Assembly.JrAsm;
+import backend.Assembly.MoveAsm;
 import backend.MipsGenerator;
 import backend.Register;
 import backend.RegisterController;
@@ -30,7 +31,13 @@ public class ReturnInstr extends Instr {
     @Override
     public void generateMips() {
         if (!(type instanceof VoidType)) { //如果有返回值，存到v0中
-            RegisterController.getRegisterController().loadToRegisterFromMemory(name, Register.V0);
+            Register register = RegisterController.getRegisterController().getRegister(name);
+            if (register == null) {
+                RegisterController.getRegisterController().loadToRegisterFromMemory(name, Register.V0);
+            } else {
+                MoveAsm moveAsm = new MoveAsm(Register.V0, register);
+                MipsGenerator.getMipsGenerator().addAsm(moveAsm);
+            }
         }
         JrAsm jrAsm = new JrAsm(Register.RA);
         MipsGenerator.getMipsGenerator().addAsm(jrAsm);

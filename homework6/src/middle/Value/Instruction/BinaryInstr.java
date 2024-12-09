@@ -44,7 +44,18 @@ public class BinaryInstr extends Instr {
     
     @Override
     public void generateMips() {
-        RegisterController.getRegisterController().dealAluRAsmRsRt(name, operands);
+        RegisterController.getRegisterController().distributeRegister(this);
+        Register rs = RegisterController.getRegisterController().getRegister(operands.get(0).getName());
+        Register rt = RegisterController.getRegisterController().getRegister(operands.get(1).getName());
+        Register rd = RegisterController.getRegisterController().getRegister(name);
+        if (rs == null) { //向rs，rt存入值
+            rs = Register.K0;
+            RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), rs);
+        }
+        if (rt == null) {
+            rt = Register.K1;
+            RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(1).getName(), rt);
+        }
         String asmOp = null;
         if (op.equals("+") || op.equals("-")) { // + -的运算
             switch (op) {
@@ -55,8 +66,15 @@ public class BinaryInstr extends Instr {
                     asmOp = "subu";
                     break;
             }
-            AluRAsm adduAsm = new AluRAsm(asmOp, Register.T2, Register.T0, Register.T1);
-            MipsGenerator.getMipsGenerator().addAsm(adduAsm);
+            if (rd == null) { //存入内存
+                rd = Register.K1;
+                AluRAsm aluRAsm = new AluRAsm(asmOp, rd, rs, rt);
+                MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
+                RegisterController.getRegisterController().storeToMemoryFromRegister(rd, name);
+            } else { //无需存入内存
+                AluRAsm aluRAsm = new AluRAsm(asmOp, rd, rs, rt);
+                MipsGenerator.getMipsGenerator().addAsm(aluRAsm);
+            }
         } else { // * / %的运算
             switch (op) {
                 case "*":
@@ -67,16 +85,29 @@ public class BinaryInstr extends Instr {
                     asmOp = "div";
                     break;
             }
-            MulDivAsm mulDivAsm = new MulDivAsm(Register.T0, Register.T1, asmOp);
+            MulDivAsm mulDivAsm = new MulDivAsm(rs, rt, asmOp);
             MipsGenerator.getMipsGenerator().addAsm(mulDivAsm);
             if (op.equals("%")) {
-                HiLoAsm hiLoAsm = new HiLoAsm(Register.T2, "mfhi");
-                MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+                if (rd == null) { //无需存入内存
+                    rd = Register.K1;
+                    HiLoAsm hiLoAsm = new HiLoAsm(rd, "mfhi");
+                    MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+                    RegisterController.getRegisterController().storeToMemoryFromRegister(rd, name); //将binary的运算结果保存到栈中
+                } else {
+                    HiLoAsm hiLoAsm = new HiLoAsm(rd, "mfhi");
+                    MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+                }
             } else {
-                HiLoAsm hiLoAsm = new HiLoAsm(Register.T2, "mflo");
-                MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+                if (rd == null) { //无需存入内存
+                    rd = Register.K1;
+                    HiLoAsm hiLoAsm = new HiLoAsm(rd, "mflo");
+                    MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+                    RegisterController.getRegisterController().storeToMemoryFromRegister(rd, name);
+                } else {
+                    HiLoAsm hiLoAsm = new HiLoAsm(rd, "mflo");
+                    MipsGenerator.getMipsGenerator().addAsm(hiLoAsm);
+                }
             }
         }
-        RegisterController.getRegisterController().storeToMemoryFromRegister(Register.T2, name);//将binary的运算结果保存到栈中
     }
 }

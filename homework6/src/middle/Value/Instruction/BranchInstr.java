@@ -42,10 +42,14 @@ public class BranchInstr extends Instr {
             Function function = RegisterController.getRegisterController().getCurFunction();
             LabelAsm labelAsm1 = new LabelAsm(function.getName() + "_" + function.getIndexOfBlock((BasicBlock) (operands.get(0))));
             LabelAsm labelAsm2 = new LabelAsm(function.getName() + "_" + function.getIndexOfBlock((BasicBlock) (operands.get(1))));
-            RegisterController.getRegisterController().loadToRegisterFromMemory(name, Register.T0);
-            BranchAsm bneAsm = new BranchAsm("bne", Register.T0, Register.ZERO, labelAsm1);
+            Register register = RegisterController.getRegisterController().getRegister(name);
+            if (register == null) { //从内存中加载出值
+                register = Register.K1;
+                RegisterController.getRegisterController().loadToRegisterFromMemory(name, register);
+            }
+            BranchAsm bneAsm = new BranchAsm("bne", register, Register.ZERO, labelAsm1);
             MipsGenerator.getMipsGenerator().addAsm(bneAsm);
-            BranchAsm beqAsm = new BranchAsm("beq", Register.T0, Register.ZERO, labelAsm2);
+            BranchAsm beqAsm = new BranchAsm("beq", register, Register.ZERO, labelAsm2);
             MipsGenerator.getMipsGenerator().addAsm(beqAsm);
         }
     }
