@@ -46,6 +46,7 @@ public class RegisterController {
         value2RegMap.put(curFunction.getName(), hashMap2);
         this.freeRegisters = Register.getFreeRegisters();
         this.usedRegisters = new ArrayList<>();
+        this.freeArgs = Register.getFreeArgs();
         curOffset = 0;
     }
     

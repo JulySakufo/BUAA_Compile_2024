@@ -129,9 +129,9 @@ public class CallInstr extends Instr {
             int totalOffset = RegisterController.getRegisterController().getCurOffset(); //当前真正的移动量
             int regOffset = RegisterController.getRegisterController().getUsedRegsSize() * 4;
             /*TODO 传递参数*/
+            ArrayList<Register> args = Register.getFreeArgs();
             for (int i = 0; i < funcRParams.size(); i++) { //参数属于下一个函数，因此sp放在参数区即可
                 Value funcRParam = funcRParams.get(i);
-                ArrayList<Register> args = Register.getFreeArgs();
                 if (args.isEmpty()) {
                     RegisterController.getRegisterController().passArguments(funcRParam.getName(), Register.K0);
                     MemAsm swAsm2 = new MemAsm("sw", Register.K0, totalOffset + -4 * (i + 1), Register.SP); //将参数存进栈里
@@ -147,22 +147,22 @@ public class CallInstr extends Instr {
             MipsGenerator.getMipsGenerator().addAsm(addiuAsm); //拥有了新的栈顶
             JAsm jalAsm = new JAsm("jal", new LabelAsm(functionName));
             MipsGenerator.getMipsGenerator().addAsm(jalAsm);
+            AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.SP, Register.SP, -totalOffset); //恢复栈顶位置
+            MipsGenerator.getMipsGenerator().addAsm(addiuAsm2);
             
             RegisterController.getRegisterController().restoreUsedRegisters(); //恢复寄存器的值
             if (!(type instanceof VoidType)) { //有返回值的要存储返回值
                 Register register = RegisterController.getRegisterController().getRegister(name);
                 if (register == null) { //将返回值保存在内存里
-                    MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4 + regOffset, Register.SP);
+                    MemAsm swAsm2 = new MemAsm("sw", Register.V0, 4 + tempOffset, Register.SP);
                     MipsGenerator.getMipsGenerator().addAsm(swAsm2); //存储函数调用的返回值
                 } else { //将返回值保存在寄存器里
                     MoveAsm moveAsm = new MoveAsm(register, Register.V0);
                     MipsGenerator.getMipsGenerator().addAsm(moveAsm);
                 }
             }
-            MemAsm lwAsm = new MemAsm("lw", Register.RA, regOffset, Register.SP); //函数调用结束，恢复调用者的相关信息
+            MemAsm lwAsm = new MemAsm("lw", Register.RA, tempOffset, Register.SP); //函数调用结束，恢复调用者的相关信息
             MipsGenerator.getMipsGenerator().addAsm(lwAsm);
-            AluIAsm addiuAsm2 = new AluIAsm("addiu", Register.SP, Register.SP, -totalOffset); //恢复栈顶位置
-            MipsGenerator.getMipsGenerator().addAsm(addiuAsm2);
             if (!(type instanceof VoidType)) { //有返回值的要考虑到新增了一个返回值需要用内存
                 Register register = RegisterController.getRegisterController().getRegister(name);
                 if (register == null) { //
