@@ -148,7 +148,7 @@ public class GetElementInstr extends Instr {
                 Register operandRegister = RegisterController.getRegisterController().getRegister(operands.get(0).getName());
                 if (operandRegister == null) {
                     operandRegister = Register.K0;
-                    RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), baseRegister);
+                    RegisterController.getRegisterController().loadToRegisterFromMemory(operands.get(0).getName(), operandRegister);
                 }
                 AluIAsm sllAsm = new AluIAsm("sll", Register.K0, operandRegister, 2);
                 MipsGenerator.getMipsGenerator().addAsm(sllAsm);
