@@ -107,24 +107,22 @@ public class RegisterController {
          * 从freeRegisters移除第一个寄存器，加入usedRegisters，设置value的register属性，建立value2RegMap的关系
          * 这样就实现了知道(1)哪些寄存器可用和不可用 (2)找对应的value直接去找register看有无，有,用register，无，用内存寻址
          */
-        if (value.getRegister() == null) {
-            if (!freeRegisters.isEmpty() && !(value.getType() instanceof ArrayType)) { //数组不存在寄存器
-                Register register = freeRegisters.remove(0);
-                value.setRegister(register);
-                usedRegisters.add(register);
-                HashMap<String, Register> hashMap = value2RegMap.get(curFunction.getName());
-                hashMap.put(value.getName(), register); //建立value的name和真实寄存器的联系
-            } else {
-                Type type = value.getType();
-                String name = value.getName();
-                if (type instanceof ArrayType) {
-                    int allocOffset = -((ArrayType) type).getArrayLength() * 4;
-                    registerController.addCurOffset(allocOffset); //申请连续的内存空间
-                    registerController.addValue(name); //将%reg与内存建立关系，后面的getElement以此索引
+        if (value.getType() instanceof ArrayType) { //数组不存在寄存器
+            int allocOffset = -((ArrayType) value.getType()).getArrayLength() * 4;
+            registerController.addCurOffset(allocOffset); //申请连续的内存空间
+            registerController.addValue(value.getName()); //将%reg与内存建立关系，后面的getElement以此索引
+        } else {
+            if (value.getRegister() == null) {
+                if (!freeRegisters.isEmpty()) { //数组不存在寄存器
+                    Register register = freeRegisters.remove(0);
+                    value.setRegister(register);
+                    usedRegisters.add(register);
+                    HashMap<String, Register> hashMap = value2RegMap.get(curFunction.getName());
+                    hashMap.put(value.getName(), register); //建立value的name和真实寄存器的联系
                 } else {
                     int allocOffset = -4;
                     registerController.addCurOffset(allocOffset); //申请一个空间
-                    registerController.addValue(name); //保存在sp里，建立%reg与offset的联系
+                    registerController.addValue(value.getName()); //保存在sp里，建立%reg与offset的联系
                 }
             }
         }

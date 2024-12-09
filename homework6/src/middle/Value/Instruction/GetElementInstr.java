@@ -50,7 +50,9 @@ public class GetElementInstr extends Instr {
     
     @Override
     public void generateMips() { //与alloca起的作用差不多
-        RegisterController.getRegisterController().distributeRegister(this); //将%reg与内存对应
+        int allocOffset = -4;
+        RegisterController.getRegisterController().addCurOffset(allocOffset);
+        RegisterController.getRegisterController().addValue(name); //将%reg与内存对应
         if (flag == 0) { //%reg = getelementptr i32,i32* %1, i32 0,i32 index
             //把数组元素的地址放在reg里
             Register baseRegister = RegisterController.getRegisterController().getRegister(lastName);
