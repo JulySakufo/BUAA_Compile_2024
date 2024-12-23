@@ -14,9 +14,11 @@ public class Compiler {
             lexer.analyse(); //开始词法分析
             Parser parser = new Parser(lexer.getTokenList(), lexer.getErrorList()); //将词法分析得到的词法单元流传入给parser
             IRGenerator irGenerator = new IRGenerator(parser.parseCompUnit()); //将语法分析得到的syntaxTree拿进去进行语义分析及代码生成
-            Module module = irGenerator.generateModule(); //生成中间代码
-            MipsGenerator mipsGenerator = MipsGenerator.getMipsGenerator();
-            mipsGenerator.generateMips(module); //生成目标代码
+            if (parser.getOk()) { //没有语法语义错误才进行中间代码生成
+                Module module = irGenerator.generateModule(); //生成中间代码
+                MipsGenerator mipsGenerator = MipsGenerator.getMipsGenerator();
+                mipsGenerator.generateMips(module); //生成目标代码
+            }
         } catch (Exception e) {
             System.out.println("Error occurred: " + e.getMessage());
             e.printStackTrace();

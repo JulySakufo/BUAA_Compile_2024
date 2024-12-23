@@ -4,6 +4,7 @@ import frontend.Calculator.Calculator;
 import frontend.Error.MyError;
 import frontend.Lexer.Token;
 import frontend.Lexer.TokenType;
+import frontend.Lexer.TokenTypeMap;
 import frontend.SymbolTable.Symbol;
 import frontend.SymbolTable.SymbolTable;
 import frontend.SyntaxTree.*;
@@ -26,6 +27,7 @@ public class Parser {
     private int formatCount;
     
     private int curParaType; //记录当前分析的实参类型,0代表值，1代表int型数组，2代表char型数组
+    private boolean ok;
     
     public Parser(ArrayList<Token> tokenList, ArrayList<MyError> errorList) {
         this.tokenList = tokenList;
@@ -41,6 +43,7 @@ public class Parser {
         this.formatCount = 0;
         this.curParaType = 0;
         initializeSymbolTable();
+        this.ok = true;
     }
     
     public SyntaxNode parseCompUnit() { //CompUnit → {Decl} {FuncDef} MainFuncDef
@@ -87,6 +90,7 @@ public class Parser {
             } catch (Exception ignored) {
             
             }
+            ok = true;
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
             try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework5\\src\\error.txt", true))) {
@@ -96,6 +100,7 @@ public class Parser {
             } catch (Exception ignored) {
             
             }
+            ok = false; //不能进行中间代码的生成
         }
         return root;
     }
@@ -347,13 +352,13 @@ public class Parser {
     
     public SyntaxNode parseMainFuncDef() { // 'int' 'main' '(' ')' Block // j
         SyntaxNode node = new SyntaxNode("MainFuncDef");
-        node.addChild(new SyntaxNode("int"));
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo(); // int
         getNextToken(); //main
-        node.addChild(new SyntaxNode("main"));
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
         getNextToken(); // (
-        node.addChild(new SyntaxNode("("));
+        node.addChild(new SyntaxNode(peekToken().getToken()));
         addInfo();
         getNextToken();
         curFuncType = "int"; // main 是保留的关键字，不纳入符号表中，但是考虑g类错误，就需要设置funcType供block检查用
@@ -456,9 +461,9 @@ public class Parser {
         if (!symbol.getIsArray()) { //加入形参类型
             parasType.add(0);
         } else {
-            if (type.equals("int")) {
+            if (TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK) {
                 parasType.add(1);
-            } else if (type.equals("char")) {
+            } else if (TokenTypeMap.getInstance().getTokenType(type) == TokenType.CHARTK) {
                 parasType.add(2);
             }
         }
@@ -562,9 +567,9 @@ public class Parser {
                         dealError(getMinErrorLineNum(), "j");
                     }
                     if (symbol.getIsArray()) {
-                        if (symbol.getType().equals("int")) {
+                        if (TokenTypeMap.getInstance().getTokenType(symbol.getType()) == TokenType.INTTK) {
                             curParaType = 1;
-                        } else if (symbol.getType().equals("char")) {
+                        } else if (TokenTypeMap.getInstance().getTokenType(symbol.getType()) == TokenType.CHARTK) {
                             curParaType = 2;
                         }
                     } else {
@@ -632,9 +637,9 @@ public class Parser {
             dealError(peekToken().getLineNum(), "c");
         } else {
             if (getSymbol(name).getIsArray()) { //是数组
-                if (symbol.getType().equals("int")) {
+                if (TokenTypeMap.getInstance().getTokenType(symbol.getType()) == TokenType.INTTK) {
                     curParaType = 1;
-                } else if (symbol.getType().equals("char")) {
+                } else if (TokenTypeMap.getInstance().getTokenType(symbol.getType()) == TokenType.CHARTK) {
                     curParaType = 2;
                 }
             } else { //不是数组
@@ -1146,14 +1151,6 @@ public class Parser {
         return null;
     }
     
-    public boolean isNumberPara(char ch) {
-        return ch >= '0' && ch <= '9';
-    }
-    
-    public boolean isCharPara(char ch) {
-        return ch == '\'';
-    }
-    
     public int getStackLevel(SymbolTable symbolTable) {
         for (int i = 1; i <= symbolTables.size(); i++) { //level有可能还未更新，以tables.size作为衡量level的标准，因为11对应
             if (symbolTables.get(i) != null && symbolTables.get(i).equals(symbolTable)) {
@@ -1161,5 +1158,9 @@ public class Parser {
             }
         }
         return -1;
+    }
+    
+    public boolean getOk() {
+        return ok;
     }
 }

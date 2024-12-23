@@ -74,19 +74,6 @@ public class Calculator {
         }
     }
     
-/*    public static int calLVal(SyntaxNode node, Stack<SymbolTable> stack) {
-        String name = node.getChildren().get(0).getName();
-        if (isConst(name, stack)) { *//*TODO 如果采用等号右端均用cal计算的话，这里要去除isConst *//*
-            if (node.getChildren().size() == 1) { //非数组元素
-                return getValue(name, stack);
-            } else { //数组元素
-                int index = calExp(node.getChildren().get(2), stack);
-                return getValue(name, stack, index);
-            }
-        }
-        return 0;
-    }*/
-    
     public static int calLVal(SyntaxNode node, Stack<SymbolTable> stack) {
         String name = node.getChildren().get(0).getName();
         if (node.getChildren().size() == 1) { //非数组元素
@@ -129,30 +116,6 @@ public class Calculator {
             return node.getChildren().get(0).getName().charAt(1); //本就只有一个字符，考虑外层包围的引号
         }
     }
-    
-    public static boolean isConst(String name, Stack<SymbolTable> stack) {
-        int size = stack.size() - 1;
-        for (int i = size; i >= 0; i--) {
-            SymbolTable symbolTable = stack.get(i);
-            if (symbolTable.hasSymbol(name)) {
-                return symbolTable.getSymbol(name).isConst();
-            }
-        }
-        return false;
-    }
-    
-/*    public static int getValue(String name, Stack<SymbolTable> stack) {
-        int size = stack.size() - 1;
-        for (int i = size; i >= 0; i--) {
-            SymbolTable symbolTable = stack.get(i);
-            if (symbolTable.hasSymbol(name)) {
-                if (symbolTable.getSymbol(name).isConst()) {
-                    return symbolTable.getSymbol(name).getValue();
-                }
-            }
-        }
-        return 0;
-    }*/
     
     public static int getValue(String name, Stack<SymbolTable> stack) {
         int size = stack.size() - 1;

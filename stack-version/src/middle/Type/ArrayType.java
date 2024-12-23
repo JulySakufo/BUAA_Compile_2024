@@ -1,5 +1,8 @@
 package middle.Type;
 
+import frontend.Lexer.TokenType;
+import frontend.Lexer.TokenTypeMap;
+
 public class ArrayType extends Type {
     private int arrayLength;
     private Type elementType;
@@ -11,7 +14,7 @@ public class ArrayType extends Type {
     
     public ArrayType(int arrayLength, String elementType) {
         this.arrayLength = arrayLength;
-        this.elementType = elementType.equals("int") ? new Integer32Type() : new Integer8Type();
+        this.elementType = TokenTypeMap.getInstance().getTokenType(elementType) == TokenType.INTTK ? new Integer32Type() : new Integer8Type();
     }
     
     @Override
