@@ -22,7 +22,7 @@ public class IRGenerator {
     private HashMap<Integer, SymbolTable> symbolTables;
     private Stack<SymbolTable> stack;
     private int level;
-    private String curFuncType;
+    private TokenType curFuncType;
     private int virtualReg;
     private Module module;
     private Function curFunction;
@@ -356,18 +356,19 @@ public class IRGenerator {
     
     public void generateFuncDef(SyntaxNode node) {
         ArrayList<SyntaxNode> children = node.getChildren();
-        curFuncType = node.getChildren().get(0).getChildren().get(0).getName();
+        String funcType = node.getChildren().get(0).getChildren().get(0).getName();
+        curFuncType = TokenTypeMap.getInstance().getTokenType(funcType);
         String name = node.getChildren().get(1).getName();
-        Symbol symbol = new Symbol(name, "func", curFuncType, getStackLevel(stack.peek()));
+        Symbol symbol = new Symbol(name, "func", funcType, getStackLevel(stack.peek()));
         stack.peek().addSymbol(symbol);
         SymbolTable symbolTable = new SymbolTable();
         stack.push(symbolTable);
         symbolTables.put(level + 1, symbolTable);
         symbol.setSymbolTable(symbolTable); //将这个符号表设置为该function symbol的symbolTable用来快速计算function的para
-        if (curFuncType.equals("void")) {
+        if (curFuncType == TokenType.VOIDTK) {
             curFunction = new Function(new VoidType(), name);
         } else {
-            curFunction = new Function(curFuncType.equals("int") ? new Integer32Type() : new Integer8Type(), name);
+            curFunction = new Function(curFuncType == TokenType.INTTK ? new Integer32Type() : new Integer8Type(), name);
         }
         module.addFunction(curFunction);
         for (SyntaxNode child : children) { //分析参数
@@ -418,7 +419,7 @@ public class IRGenerator {
     }
     
     public void generateMainFuncDef(SyntaxNode node) {
-        curFuncType = "int";
+        curFuncType = TokenType.INTTK;
         SymbolTable symbolTable = new SymbolTable();
         stack.push(symbolTable);
         symbolTables.put(level + 1, symbolTable);
@@ -461,7 +462,7 @@ public class IRGenerator {
                 generateBlockItem(child);
             }
         }
-        if (!curFunction.isLastInstrReturnVoid() && curFuncType.equals("void") && isFuncDef) {
+        if (!curFunction.isLastInstrReturnVoid() && curFuncType == TokenType.VOIDTK && isFuncDef) {
             curBasicBlock.addInstruction(new ReturnInstr(new VoidType()));
         }
         stack.pop();
@@ -511,7 +512,7 @@ public class IRGenerator {
     public void generateReturn(SyntaxNode node) {
         if (node.getChildren().get(1).getName().equals("Exp")) { //有返回值
             Value operand = generateExp(node.getChildren().get(1));
-            if (curFuncType.equals("int")) { //int型函数
+            if (curFuncType == TokenType.INTTK) { //int型函数
                 if (operand.getType() instanceof Integer8Type) { //扩展
                     ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand, operand.getType());
                     operand = zeroExtInstr; //截断后的寄存器才是对的

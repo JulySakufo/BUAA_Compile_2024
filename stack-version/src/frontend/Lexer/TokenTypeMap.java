@@ -9,7 +9,7 @@ public class TokenTypeMap {
     public TokenTypeMap() {
         tokenTypeMap.put("main", TokenType.MAINTK);
         tokenTypeMap.put("const", TokenType.CONSTTK);
-        tokenTypeMap.put("int", TokenType.INTTK);
+        tokenTypeMap.put("integer", TokenType.INTTK);
         tokenTypeMap.put("char", TokenType.CHARTK);
         tokenTypeMap.put("break", TokenType.BREAKTK);
         tokenTypeMap.put("continue", TokenType.CONTINUETK);
