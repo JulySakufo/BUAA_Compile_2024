@@ -207,7 +207,7 @@ public class Lexer {
         return errorList;
     }
     
-    public void dealError() throws IOException {
+    public void dealError() {
         errorList.add(new MyError(lineNum, "a"));
     }
 }

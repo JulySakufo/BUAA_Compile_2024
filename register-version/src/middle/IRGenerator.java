@@ -1,6 +1,8 @@
 package middle;
 
 import frontend.Calculator.Calculator;
+import frontend.Lexer.TokenType;
+import frontend.Lexer.TokenTypeMap;
 import frontend.SymbolTable.Symbol;
 import frontend.SymbolTable.SymbolTable;
 import frontend.SyntaxTree.SyntaxNode;
@@ -20,7 +22,7 @@ public class IRGenerator {
     private HashMap<Integer, SymbolTable> symbolTables;
     private Stack<SymbolTable> stack;
     private int level;
-    private String curFuncType;
+    private TokenType curFuncType;
     private int virtualReg;
     private Module module;
     private Function curFunction;
@@ -52,7 +54,7 @@ public class IRGenerator {
                 generateMainFuncDef(child);
             }
         }
-        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework6\\src\\llvm_ir.txt"))) {
+        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("llvm_ir.txt"))) {
             stdout.write(module.toString());
         } catch (Exception ignored) {
         
@@ -111,14 +113,14 @@ public class IRGenerator {
                 SyntaxNode constExpNode = node.getChildren().get(2);
                 int arrayLength = Calculator.calConstExp(constExpNode, stack);
                 symbol.setArrayLength(arrayLength);
-                curBasicBlock.addInstruction(new AllocaInstr(new ArrayType(arrayLength, type.equals("int") ? new Integer32Type() : new Integer8Type()), "%" + virtualReg));
+                curBasicBlock.addInstruction(new AllocaInstr(new ArrayType(arrayLength, generateLLVMType(type)), "%" + virtualReg));
                 symbol.setVirtualReg("%" + virtualReg); //只需要记录第一个,数组通过getElementType移动
                 virtualReg++; //申请一个[arrayLength x type]的数组空间
                 generateConstInitVal(node.getChildren().get(5), symbol);
             } else { //非数组局部变量
                 generateConstInitVal(node.getChildren().get(2), symbol);
-                curBasicBlock.addInstruction(new AllocaInstr(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg));
-                curBasicBlock.addInstruction(new StoreInstr(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, symbol.getValue()));
+                curBasicBlock.addInstruction(new AllocaInstr(generateLLVMType(type), "%" + virtualReg));
+                curBasicBlock.addInstruction(new StoreInstr(generateLLVMType(type), "%" + virtualReg, symbol.getValue()));
                 symbol.setVirtualReg("%" + virtualReg);
                 virtualReg++;
             }
@@ -164,7 +166,7 @@ public class IRGenerator {
                 SyntaxNode constExpNode = node.getChildren().get(2);
                 int arrayLength = Calculator.calConstExp(constExpNode, stack);
                 symbol.setArrayLength(arrayLength);
-                curBasicBlock.addInstruction(new AllocaInstr(new ArrayType(arrayLength, type.equals("int") ? new Integer32Type() : new Integer8Type()), "%" + virtualReg));
+                curBasicBlock.addInstruction(new AllocaInstr(new ArrayType(arrayLength, generateLLVMType(type)), "%" + virtualReg));
                 symbol.setVirtualReg("%" + virtualReg);
                 virtualReg++; //申请一个[arrayLength x type]的数组空间
                 if (node.getLastChild().getName().equals("InitVal")) { //赋值了
@@ -177,7 +179,7 @@ public class IRGenerator {
                     symbol.setValues(values);
                 }
             } else { //非数组局部变量
-                curBasicBlock.addInstruction(new AllocaInstr(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg));
+                curBasicBlock.addInstruction(new AllocaInstr(generateLLVMType(type), "%" + virtualReg));
                 symbol.setVirtualReg("%" + virtualReg);
                 virtualReg++;
                 if (node.getLastChild().getName().equals("InitVal")) { //赋值了
@@ -205,7 +207,7 @@ public class IRGenerator {
                     values.add(result);
                     if (curFunction != null) { //局部变量数组，初值进行getElementPtr并进行store
                         curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
-                        curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, result));
+                        curBasicBlock.addInstruction(new StoreInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, result));
                         virtualReg++;
                         index++;
                     }
@@ -223,7 +225,7 @@ public class IRGenerator {
                         values.add(result);
                         if (curFunction != null) { //局部变量数组，初值进行getElementPtr并进行store
                             curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
-                            curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, result));
+                            curBasicBlock.addInstruction(new StoreInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, result));
                             virtualReg++;
                             index++;
                         }
@@ -235,7 +237,7 @@ public class IRGenerator {
                  * 对于任何有初始值的字符数组，编译器应该在初始化时将未使用的部分置0
                  * 此处对局部常量字符数组进行了处理
                  */
-                if (curFunction != null && symbol.getType().equals("char")) { //局部常量数组，给未初始化的部分赋0处理
+                if (curFunction != null && TokenTypeMap.getInstance().getTokenType(symbol.getType()) == TokenType.CHARTK) { //局部常量数组，给未初始化的部分赋0处理
                     values.add(0);
                     curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
                     curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, 0));
@@ -274,7 +276,7 @@ public class IRGenerator {
                         operand = truncInstr;
                     }
                 }
-                StoreInstr storeInstr = new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), operand, symbol.getVirtualReg());
+                StoreInstr storeInstr = new StoreInstr(generateLLVMType(symbol.getType()), operand, symbol.getVirtualReg());
                 curBasicBlock.addInstruction(storeInstr);
             }
         } else { //数组
@@ -305,7 +307,7 @@ public class IRGenerator {
                                 virtualReg++;
                             }
                         }
-                        curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), operand, "%" + lastVirtualReg));
+                        curBasicBlock.addInstruction(new StoreInstr(generateLLVMType(symbol.getType()), operand, "%" + lastVirtualReg));
                         index++;
                     }
                 } else if (child.getName().equals("StringConst")) {
@@ -322,7 +324,7 @@ public class IRGenerator {
                         values.add(result);
                         if (curFunction != null) { //局部变量数组，初值进行getElementPtr并进行store
                             curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
-                            curBasicBlock.addInstruction(new StoreInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, result));
+                            curBasicBlock.addInstruction(new StoreInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, result));
                             virtualReg++;
                             index++;
                         }
@@ -334,7 +336,7 @@ public class IRGenerator {
                  * 对于任何有初始值的字符数组，编译器应该在初始化时将未使用的部分置0
                  * 此处对局部变量字符数组进行了处理
                  */
-                if (curFunction != null && symbol.getType().equals("char")) { //局部变量数组，给未初始化的部分赋0处理
+                if (curFunction != null && TokenTypeMap.getInstance().getTokenType(symbol.getType()) == TokenType.CHARTK) { //局部变量数组，给未初始化的部分赋0处理
                     values.add(0);
                     curBasicBlock.addInstruction(new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, index, symbol.getVirtualReg()));
                     curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), "%" + virtualReg, 0));
@@ -354,18 +356,19 @@ public class IRGenerator {
     
     public void generateFuncDef(SyntaxNode node) {
         ArrayList<SyntaxNode> children = node.getChildren();
-        curFuncType = node.getChildren().get(0).getChildren().get(0).getName();
+        String funcType = node.getChildren().get(0).getChildren().get(0).getName();
+        curFuncType = TokenTypeMap.getInstance().getTokenType(funcType);
         String name = node.getChildren().get(1).getName();
-        Symbol symbol = new Symbol(name, "func", curFuncType, getStackLevel(stack.peek()));
+        Symbol symbol = new Symbol(name, "func", funcType, getStackLevel(stack.peek()));
         stack.peek().addSymbol(symbol);
         SymbolTable symbolTable = new SymbolTable();
         stack.push(symbolTable);
         symbolTables.put(level + 1, symbolTable);
         symbol.setSymbolTable(symbolTable); //将这个符号表设置为该function symbol的symbolTable用来快速计算function的para
-        if (curFuncType.equals("void")) {
+        if (curFuncType == TokenType.VOIDTK) {
             curFunction = new Function(new VoidType(), name);
         } else {
-            curFunction = new Function(curFuncType.equals("int") ? new Integer32Type() : new Integer8Type(), name);
+            curFunction = new Function(curFuncType == TokenType.INTTK ? new Integer32Type() : new Integer8Type(), name);
         }
         module.addFunction(curFunction);
         for (SyntaxNode child : children) { //分析参数
@@ -395,12 +398,12 @@ public class IRGenerator {
         stack.peek().addSymbol(symbol);
         if (node.getLastChild().getName().equals("]")) { //数组参数
             symbol.setIsArray(true);
-            Param param = new Param(type.equals("int") ? new Integer32PointerType() : new Integer8PointerType(), "%" + virtualReg);
+            Param param = new Param(generateLLVMPointerType(type), "%" + virtualReg);
             symbol.setVirtualReg("%" + virtualReg);
             virtualReg++;
             curFunction.addParam(param);
         } else { //普通变量
-            Param param = new Param(type.equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg);
+            Param param = new Param(generateLLVMType(type), "%" + virtualReg);
             symbol.setVirtualReg("%" + virtualReg);
             virtualReg++;
             curFunction.addParam(param);
@@ -416,7 +419,7 @@ public class IRGenerator {
     }
     
     public void generateMainFuncDef(SyntaxNode node) {
-        curFuncType = "int";
+        curFuncType = TokenType.INTTK;
         SymbolTable symbolTable = new SymbolTable();
         stack.push(symbolTable);
         symbolTables.put(level + 1, symbolTable);
@@ -459,7 +462,7 @@ public class IRGenerator {
                 generateBlockItem(child);
             }
         }
-        if (!curFunction.isLastInstrReturnVoid() && curFuncType.equals("void") && isFuncDef) {
+        if (!curFunction.isLastInstrReturnVoid() && curFuncType == TokenType.VOIDTK && isFuncDef) {
             curBasicBlock.addInstruction(new ReturnInstr(new VoidType()));
         }
         stack.pop();
@@ -509,7 +512,7 @@ public class IRGenerator {
     public void generateReturn(SyntaxNode node) {
         if (node.getChildren().get(1).getName().equals("Exp")) { //有返回值
             Value operand = generateExp(node.getChildren().get(1));
-            if (curFuncType.equals("int")) { //int型函数
+            if (curFuncType == TokenType.INTTK) { //int型函数
                 if (operand.getType() instanceof Integer8Type) { //扩展
                     ZeroExtInstr zeroExtInstr = new ZeroExtInstr(new Integer32Type(), "%" + virtualReg, operand, operand.getType());
                     operand = zeroExtInstr; //截断后的寄存器才是对的
@@ -718,7 +721,7 @@ public class IRGenerator {
             if (node.getChildren().get(0).getChildren().size() > 1) { //数组 ident[Exp]
                 Value operand = generateExp(node.getChildren().get(0).getChildren().get(2)); //exp的寄存器
                 if (symbol.getIsParam()) { //是形参数组
-                    GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, operand, symbolReg, 2);
+                    GetElementInstr getElementInstr = new GetElementInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, operand, symbolReg, 2);
                     curBasicBlock.addInstruction(getElementInstr); //得到数组元素
                 } else {
                     GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, operand, symbolReg);
@@ -778,13 +781,13 @@ public class IRGenerator {
             String symbolReg = symbol.getVirtualReg(); //symbol对应的寄存器
             if (node.getChildren().size() == 1) { //ident
                 if (!symbol.getIsArray()) {
-                    LoadInstr loadInstr = new LoadInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), symbolReg, "%" + virtualReg);
+                    LoadInstr loadInstr = new LoadInstr(generateLLVMType(symbol.getType()), symbolReg, "%" + virtualReg);
                     curBasicBlock.addInstruction(loadInstr);
                     virtualReg++;
                     return loadInstr; //把load指令返回回去，由binary取load的最前面的虚拟寄存器作为binary的operand
                 } else { //数组整个整体，不是单独的元素
                     if (symbol.getIsParam()) {
-                        GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, new Value(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), String.valueOf(0)), symbolReg, 2);
+                        GetElementInstr getElementInstr = new GetElementInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, new Value(generateLLVMType(symbol.getType()), String.valueOf(0)), symbolReg, 2);
                         curBasicBlock.addInstruction(getElementInstr);
                         virtualReg++;
                         return getElementInstr;
@@ -798,14 +801,14 @@ public class IRGenerator {
             } else { //ident[Exp]
                 Value operand = generateExp(node.getChildren().get(2)); //得到exp的寄存器
                 if (symbol.getIsParam()) {
-                    GetElementInstr getElementInstr = new GetElementInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + virtualReg, operand, symbolReg, 2);
+                    GetElementInstr getElementInstr = new GetElementInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, operand, symbolReg, 2);
                     curBasicBlock.addInstruction(getElementInstr); //得到数组元素
                 } else {
                     GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, operand, symbolReg);
                     curBasicBlock.addInstruction(getElementInstr); //得到数组元素
                 }
                 virtualReg++;
-                LoadInstr loadInstr = new LoadInstr(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "%" + (virtualReg - 1), "%" + virtualReg);
+                LoadInstr loadInstr = new LoadInstr(generateLLVMType(symbol.getType()), "%" + (virtualReg - 1), "%" + virtualReg);
                 curBasicBlock.addInstruction(loadInstr);
                 virtualReg++;
                 return loadInstr;
@@ -1094,10 +1097,10 @@ public class IRGenerator {
     }
     
     public Type getLLVMFunctionType(String type) {
-        switch (type) {
-            case "int":
+        switch (TokenTypeMap.getInstance().getTokenType(type)) {
+            case INTTK:
                 return new Integer32Type();
-            case "char":
+            case CHARTK:
                 return new Integer8Type();
             default:
                 return new VoidType();
@@ -1131,5 +1134,13 @@ public class IRGenerator {
             default: // \\
                 return 92;
         }
+    }
+    
+    public Type generateLLVMType(String type) {
+        return TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK ? new Integer32Type() : new Integer8Type();
+    }
+    
+    public Type generateLLVMPointerType(String type) {
+        return TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK ? new Integer32PointerType() : new Integer8PointerType();
     }
 }

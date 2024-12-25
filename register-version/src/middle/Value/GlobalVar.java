@@ -2,10 +2,11 @@ package middle.Value;
 
 import backend.Assembly.Data;
 import backend.MipsGenerator;
+import frontend.Lexer.TokenType;
+import frontend.Lexer.TokenTypeMap;
 import frontend.SymbolTable.Symbol;
 import middle.Type.Integer32Type;
 import middle.Type.Integer8Type;
-import middle.Type.Type;
 
 import java.util.ArrayList;
 
@@ -13,7 +14,7 @@ public class GlobalVar extends Value {
     private Symbol symbol;
     
     public GlobalVar(Symbol symbol) {
-        super(symbol.getType().equals("int") ? new Integer32Type() : new Integer8Type(), "@" + symbol.getName());
+        super(TokenTypeMap.getInstance().getTokenType(symbol.getType()) == TokenType.INTTK ? new Integer32Type() : new Integer8Type(), "@" + symbol.getName());
         this.symbol = symbol;
     }
     

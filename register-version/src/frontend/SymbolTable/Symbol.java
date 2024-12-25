@@ -1,5 +1,8 @@
 package frontend.SymbolTable;
 
+import frontend.Lexer.TokenType;
+import frontend.Lexer.TokenTypeMap;
+
 import java.util.ArrayList;
 
 public class Symbol {
@@ -65,9 +68,6 @@ public class Symbol {
         return isArray;
     }
     
-    public SymbolTable getSymbolTable() {
-        return symbolTable;
-    }
     
     public ArrayList<Integer> getParasType() {
         return parasType;
@@ -133,55 +133,52 @@ public class Symbol {
         this.values = values;
     }
     
-    public void setIsGlobal(boolean isGlobal) {
-        this.isGlobal = isGlobal;
-    }
     
     public void setIsParam(boolean isParam) {
         this.isParam = isParam;
     }
     
     public boolean isConstChar() {
-        return isConst() && type.equals("char") && !getIsArray();
+        return isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.CHARTK && !getIsArray();
     }
     
     public boolean isConstInt() {
-        return isConst() && type.equals("int") && !getIsArray();
+        return isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK && !getIsArray();
     }
     
     public boolean isConstCharArray() {
-        return isConst() && type.equals("char") && getIsArray();
+        return isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.CHARTK && getIsArray();
     }
     
     public boolean isConstIntArray() {
-        return isConst() && type.equals("int") && getIsArray();
+        return isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK && getIsArray();
     }
     
     public boolean isChar() {
-        return !isConst() && type.equals("char") && !getIsArray();
+        return !isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.CHARTK && !getIsArray();
     }
     
     public boolean isInt() {
-        return !isConst() && type.equals("int") && !getIsArray();
+        return !isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK && !getIsArray();
     }
     
     public boolean isCharArray() {
-        return !isConst() && type.equals("char") && getIsArray();
+        return !isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.CHARTK && getIsArray();
     }
     
     public boolean isIntArray() {
-        return !isConst() && type.equals("int") && getIsArray();
+        return !isConst() && TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK && getIsArray();
     }
     
     public boolean isVoidFunc() {
-        return kind.equals("func") && type.equals("void");
+        return kind.equals("func") && TokenTypeMap.getInstance().getTokenType(type) == TokenType.VOIDTK;
     }
     
     public boolean isCharFunc() {
-        return kind.equals("func") && type.equals("char");
+        return kind.equals("func") && TokenTypeMap.getInstance().getTokenType(type) == TokenType.CHARTK;
     }
     
     public boolean isIntFunc() {
-        return kind.equals("func") && type.equals("int");
+        return kind.equals("func") && TokenTypeMap.getInstance().getTokenType(type) == TokenType.INTTK;
     }
 }
