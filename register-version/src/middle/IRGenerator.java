@@ -718,7 +718,7 @@ public class IRGenerator {
             String name = node.getChildren().get(0).getChildren().get(0).getName(); //ident
             Symbol symbol = getSymbol(name);
             String symbolReg = symbol.getVirtualReg(); //symbol对应的寄存器
-            if (node.getChildren().get(0).getChildren().size() > 1) { //数组 ident[Exp]
+            if (node.getChildren().get(0).getChildren().size() > 1 && !node.getChildren().get(2).getName().equals("Exp")) { //数组 ident[Exp]
                 Value operand = generateExp(node.getChildren().get(0).getChildren().get(2)); //exp的寄存器
                 if (symbol.getIsParam()) { //是形参数组
                     GetElementInstr getElementInstr = new GetElementInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, operand, symbolReg, 2);
@@ -733,23 +733,13 @@ public class IRGenerator {
             //非数组的无需任何操作改变
             switch (node.getChildren().get(2).getName()) {
                 case "getint":
-                    curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), "getint", "%" + virtualReg));
+                case "getchar":
+                    curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), node.getChildren().get(2).getName(), "%" + virtualReg));
                     if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) {
                         virtualReg++;
                         curBasicBlock.addInstruction(new TruncInstr(virtualReg, new Value(new Type(), "%" + (virtualReg - 1))));
                         curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     } else {
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
-                    }
-                    virtualReg++;
-                    break;
-                case "getchar":
-                    curBasicBlock.addInstruction(new CallInstr(new Integer32Type(), "getchar", "%" + virtualReg));
-                    if (!twoTypeMatch(getLLVMFunctionType(symbol.getType()), new Integer32Type())) { //char = getchar()，getchar返回值是i32
-                        virtualReg++;
-                        curBasicBlock.addInstruction(new TruncInstr(virtualReg, new Value(new Type(), "%" + (virtualReg - 1))));
-                        curBasicBlock.addInstruction(new StoreInstr(new Integer8Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
-                    } else { //i32对i32
                         curBasicBlock.addInstruction(new StoreInstr(new Integer32Type(), new Value(new Type(), "%" + virtualReg), symbolReg));
                     }
                     virtualReg++;
@@ -767,6 +757,18 @@ public class IRGenerator {
                             operand = truncInstr;
                         }
                         virtualReg++; //新增了一条语句，virtualReg应该自增，指向下一个未分配的虚拟寄存器
+                    }
+                    if (node.getChildren().get(0).getChildren().size() > 1) { //数组 ident[Exp]
+                        Value expOperand = generateExp(node.getChildren().get(0).getChildren().get(2)); //exp的寄存器
+                        if (symbol.getIsParam()) { //是形参数组
+                            GetElementInstr getElementInstr = new GetElementInstr(generateLLVMType(symbol.getType()), "%" + virtualReg, expOperand, symbolReg, 2);
+                            curBasicBlock.addInstruction(getElementInstr); //得到数组元素
+                        } else {
+                            GetElementInstr getElementInstr = new GetElementInstr(new ArrayType(symbol.getArrayLength(), symbol.getType()), "%" + virtualReg, expOperand, symbolReg);
+                            curBasicBlock.addInstruction(getElementInstr); //得到数组元素
+                        }
+                        symbolReg = "%" + virtualReg; //数组的寄存器要换过来，因为使用了getElementType
+                        virtualReg++;
                     }
                     curBasicBlock.addInstruction(new StoreInstr(getLLVMFunctionType(symbol.getType()), operand, symbolReg));
             }

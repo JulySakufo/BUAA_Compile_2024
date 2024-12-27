@@ -20,7 +20,7 @@ public class MipsGenerator {
     
     public void generateMips(Module module) {
         module.generateMips();
-        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\homework6\\src\\mips.txt"))) {
+        try (BufferedWriter stdout = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\register-version\\src\\mips.txt"))) {
             stdout.write(".data\n");
             for (Data data : dataSegment) {
                 stdout.write(data.toString());

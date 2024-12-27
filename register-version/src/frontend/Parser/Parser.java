@@ -93,7 +93,7 @@ public class Parser {
             ok = true;
         } else {
             errorList.sort(Comparator.comparingInt(MyError::getLineNum));
-            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("error.txt", true))) {
+            try (BufferedWriter stderr = new BufferedWriter(new FileWriter("D:\\BUAA_Compile_2024\\register-version\\src\\error.txt", true))) {
                 for (MyError error : errorList) {
                     stderr.write(error.getLineNum() + " " + error.getType() + "\n");
                 }
